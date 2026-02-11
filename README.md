@@ -18,12 +18,12 @@ A Hammerhead Karoo extension that streams live ride data (power, heart rate, cad
 
 ## Dashboard Views
 
-| View | URL | Description |
-|------|-----|-------------|
-| Index | `http://<karoo-ip>:8080/` | 3×3 grid with all metrics |
-| Coach | `http://<karoo-ip>:8080/coach` | Detailed view with GPS coordinates |
-| Athlete | `http://<karoo-ip>:8080/athlete` | Large glanceable metrics (power, HR, cadence, speed, time) |
-| REST API | `http://<karoo-ip>:8080/api/status` | JSON snapshot of current state |
+| View     | URL                                 | Description                                                |
+| -------- | ----------------------------------- | ---------------------------------------------------------- |
+| Index    | `http://<karoo-ip>:8080/`           | 3×3 grid with all metrics                                  |
+| Coach    | `http://<karoo-ip>:8080/coach`      | Detailed view with GPS coordinates                         |
+| Athlete  | `http://<karoo-ip>:8080/athlete`    | Large glanceable metrics (power, HR, cadence, speed, time) |
+| REST API | `http://<karoo-ip>:8080/api/status` | JSON snapshot of current state                             |
 
 ## Data Fields
 

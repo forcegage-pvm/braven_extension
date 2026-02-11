@@ -74,6 +74,36 @@ class DataCollector(private val karooSystem: KarooSystemService) {
             _currentState.update { it.copy(temperature = value, timestamp = now()) }
         }
 
+        // 3-second smoothed average power
+        collectSingleValue(DataType.Type.SMOOTHED_3S_AVERAGE_POWER) { value ->
+            _currentState.update { it.copy(power3sAvg = value.toInt(), timestamp = now()) }
+        }
+
+        // Power Zone (1-7)
+        collectSingleValue(DataType.Type.POWER_ZONE) { value ->
+            _currentState.update { it.copy(powerZone = value.toInt(), timestamp = now()) }
+        }
+
+        // Max Heart Rate (session)
+        collectSingleValue(DataType.Type.MAX_HR) { value ->
+            _currentState.update { it.copy(maxHeartRate = value.toInt(), timestamp = now()) }
+        }
+
+        // Average Speed (m/s)
+        collectSingleValue(DataType.Type.AVERAGE_SPEED) { value ->
+            _currentState.update { it.copy(averageSpeed = value, timestamp = now()) }
+        }
+
+        // Core Body Temperature (°C, CORE sensor)
+        collectSingleValue(DataType.Type.CORE_TEMP) { value ->
+            _currentState.update { it.copy(coreTemp = value, timestamp = now()) }
+        }
+
+        // Battery Percent (Karoo device)
+        collectSingleValue(DataType.Type.BATTERY_PERCENT) { value ->
+            _currentState.update { it.copy(batteryPercent = value.toInt(), timestamp = now()) }
+        }
+
         // GPS Location — multi-field data point
         scope.launch {
             karooSystem.streamDataFlow(DataType.Type.LOCATION).collect { state ->

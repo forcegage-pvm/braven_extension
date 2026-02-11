@@ -44,6 +44,7 @@ class WebServer(
             uri == "/athlete" || uri == "/athlete.html" -> "web/athlete.html"
             uri.startsWith("/css/") -> "web$uri"
             uri.startsWith("/js/") -> "web$uri"
+            uri.startsWith("/fonts/") -> "web$uri"
             uri == "/live" -> return super.serve(session) // WebSocket upgrade
             uri == "/api/status" -> {
                 return NanoHTTPD.newFixedLengthResponse(
@@ -122,6 +123,9 @@ class WebServer(
         path.endsWith(".png") -> "image/png"
         path.endsWith(".svg") -> "image/svg+xml"
         path.endsWith(".ico") -> "image/x-icon"
+        path.endsWith(".ttf") -> "font/ttf"
+        path.endsWith(".woff") -> "font/woff"
+        path.endsWith(".woff2") -> "font/woff2"
         else -> "application/octet-stream"
     }
 
