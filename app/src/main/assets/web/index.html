@@ -1,267 +1,425 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="h-full bg-neutral-950 antialiased">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Braven Lab Dashboard</title>
     <script src="/js/tailwind.js"></script>
     <script src="/js/lucide.min.js"></script>
     <style>
-        @font-face { font-family: 'Inter'; font-style: normal; font-weight: 300; src: url('/fonts/inter-300.ttf') format('truetype'); }
-        @font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; src: url('/fonts/inter-400.ttf') format('truetype'); }
-        @font-face { font-family: 'Inter'; font-style: normal; font-weight: 500; src: url('/fonts/inter-500.ttf') format('truetype'); }
-        @font-face { font-family: 'Inter'; font-style: normal; font-weight: 600; src: url('/fonts/inter-600.ttf') format('truetype'); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      @font-face {
+        font-family: "Inter";
+        font-style: normal;
+        font-weight: 300;
+        src: url("/fonts/inter-300.ttf") format("truetype");
+      }
+      @font-face {
+        font-family: "Inter";
+        font-style: normal;
+        font-weight: 400;
+        src: url("/fonts/inter-400.ttf") format("truetype");
+      }
+      @font-face {
+        font-family: "Inter";
+        font-style: normal;
+        font-weight: 500;
+        src: url("/fonts/inter-500.ttf") format("truetype");
+      }
+      @font-face {
+        font-family: "Inter";
+        font-style: normal;
+        font-weight: 600;
+        src: url("/fonts/inter-600.ttf") format("truetype");
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
     </style>
     <script>
-        tailwind.config = {
-            theme: {
-                fontFamily: {
-                    sans: ['Inter', 'sans-serif'],
-                    mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
-                },
-                extend: {
-                    colors: {
-                        karoo: { yellow: '#FFD700', purple: '#8B5CF6' }
-                    },
-                    keyframes: {
-                        pulsefast: {
-                            '0%, 100%': { opacity: '1' },
-                            '50%': { opacity: '0.4' },
-                        }
-                    },
-                    animation: {
-                        pulsefast: 'pulsefast 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    }
-                }
-            }
-        }
+      tailwind.config = {
+        theme: {
+          fontFamily: {
+            sans: ["Inter", "sans-serif"],
+            mono: [
+              "ui-monospace",
+              "SFMono-Regular",
+              "Menlo",
+              "Monaco",
+              "Consolas",
+              "monospace",
+            ],
+          },
+          extend: {
+            colors: {
+              karoo: { yellow: "#FFD700", purple: "#8B5CF6" },
+            },
+            keyframes: {
+              pulsefast: {
+                "0%, 100%": { opacity: "1" },
+                "50%": { opacity: "0.4" },
+              },
+            },
+            animation: {
+              pulsefast: "pulsefast 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+            },
+          },
+        },
+      };
     </script>
-</head>
-<body class="h-full flex flex-col text-neutral-100 overflow-hidden selection:bg-karoo-yellow selection:text-black">
-
+  </head>
+  <body
+    class="h-full flex flex-col text-neutral-100 overflow-hidden selection:bg-karoo-yellow selection:text-black"
+  >
     <!-- Top Status Bar -->
-    <header class="flex-none flex items-center justify-between px-8 py-6 border-b border-white/5 bg-neutral-900/30 backdrop-blur-xl z-10">
-        <div class="flex items-center gap-4">
-            <!-- Connection status indicator -->
-            <div id="connectionBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20">
-                <span class="relative flex h-2 w-2">
-                  <span id="pingDot" class="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span id="solidDot" class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                </span>
-                <span id="connectionText" class="text-sm font-medium text-red-500 tracking-wide uppercase">Disconnected</span>
-            </div>
-            <h1 class="text-lg font-medium text-neutral-400 tracking-tight">Braven Performance Lab</h1>
+    <header
+      class="flex-none flex items-center justify-between px-8 py-6 border-b border-white/5 bg-neutral-900/30 backdrop-blur-xl z-10"
+    >
+      <div class="flex items-center gap-4">
+        <!-- Connection status indicator -->
+        <div
+          id="connectionBadge"
+          class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20"
+        >
+          <span class="relative flex h-2 w-2">
+            <span
+              id="pingDot"
+              class="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"
+            ></span>
+            <span
+              id="solidDot"
+              class="relative inline-flex rounded-full h-2 w-2 bg-red-500"
+            ></span>
+          </span>
+          <span
+            id="connectionText"
+            class="text-sm font-medium text-red-500 tracking-wide uppercase"
+            >Disconnected</span
+          >
         </div>
+        <h1 class="text-lg font-medium text-neutral-400 tracking-tight">
+          Braven Performance Lab
+        </h1>
+      </div>
 
-        <div class="flex items-center gap-8">
-             <div class="flex items-center gap-3 text-neutral-400">
-                <i data-lucide="timer" class="w-5 h-5"></i>
-                <span id="elapsedTime" class="text-xl font-medium tabular-nums text-white">00:00</span>
-            </div>
-            <div class="h-4 w-px bg-white/10"></div>
-            <div class="flex items-center gap-2 text-neutral-400">
-                <i id="batteryIcon" data-lucide="battery" class="w-5 h-5"></i>
-                <span id="batteryPercent" class="text-lg font-medium">--%</span>
-            </div>
+      <div class="flex items-center gap-8">
+        <div class="flex items-center gap-3 text-neutral-400">
+          <i data-lucide="timer" class="w-5 h-5"></i>
+          <span
+            id="elapsedTime"
+            class="text-xl font-medium tabular-nums text-white"
+            >00:00</span
+          >
         </div>
+        <div class="h-4 w-px bg-white/10"></div>
+        <div class="flex items-center gap-2 text-neutral-400">
+          <i id="batteryIcon" data-lucide="battery" class="w-5 h-5"></i>
+          <span id="batteryPercent" class="text-lg font-medium">--%</span>
+        </div>
+      </div>
     </header>
 
     <!-- Main Grid Dashboard -->
     <main class="flex-grow p-6 grid grid-cols-3 grid-rows-2 gap-6 relative">
-        <!-- Background decorative glow -->
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-900/10 rounded-full blur-[120px] pointer-events-none"></div>
+      <!-- Background decorative glow -->
+      <div
+        class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-900/10 rounded-full blur-[120px] pointer-events-none"
+      ></div>
 
-        <!-- Metric Card: Power -->
-        <div class="group relative flex flex-col justify-between rounded-[32px] bg-neutral-900/40 border border-white/5 p-8 backdrop-blur-sm transition duration-500 hover:bg-neutral-900/60 hover:border-white/10 overflow-hidden">
-            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-indigo-500 opacity-80"></div>
-            <div class="flex items-start justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="p-2.5 rounded-xl bg-purple-500/10 text-purple-400">
-                        <i data-lucide="zap" class="w-6 h-6"></i>
-                    </div>
-                    <span class="text-sm font-medium tracking-widest text-neutral-400 uppercase">Power</span>
-                </div>
-                <span id="powerZoneBadge" class="text-sm font-medium text-purple-400 bg-purple-500/10 px-2 py-1 rounded">--</span>
+      <!-- Metric Card: Power -->
+      <div
+        class="group relative flex flex-col justify-between rounded-[32px] bg-neutral-900/40 border border-white/5 p-8 backdrop-blur-sm transition duration-500 hover:bg-neutral-900/60 hover:border-white/10 overflow-hidden"
+      >
+        <div
+          class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-indigo-500 opacity-80"
+        ></div>
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-3">
+            <div class="p-2.5 rounded-xl bg-purple-500/10 text-purple-400">
+              <i data-lucide="zap" class="w-6 h-6"></i>
             </div>
-            <div class="flex items-baseline gap-2 mt-2">
-                <span id="power" class="text-9xl font-medium tracking-tighter text-white tabular-nums group-hover:scale-105 transition-transform duration-500 origin-left">--</span>
-                <span class="text-2xl text-neutral-500 font-medium">W</span>
-            </div>
-            <div class="mt-auto">
-                <div class="flex justify-between text-base text-neutral-500 mb-2">
-                    <span>3s Avg</span>
-                    <span id="power3sAvg" class="text-white tabular-nums">-- W</span>
-                </div>
-                <div class="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden">
-                    <div id="powerBar" class="h-full bg-purple-500 w-[0%] rounded-full transition-all duration-300"></div>
-                </div>
-            </div>
+            <span
+              class="text-sm font-medium tracking-widest text-neutral-400 uppercase"
+              >Power</span
+            >
+          </div>
+          <span
+            id="powerZoneBadge"
+            class="text-sm font-medium text-purple-400 bg-purple-500/10 px-2 py-1 rounded"
+            >--</span
+          >
         </div>
+        <div class="flex items-baseline gap-2 mt-2">
+          <span
+            id="power"
+            class="text-9xl font-medium tracking-tighter text-white tabular-nums group-hover:scale-105 transition-transform duration-500 origin-left"
+            >--</span
+          >
+          <span class="text-2xl text-neutral-500 font-medium">W</span>
+        </div>
+        <div class="mt-auto">
+          <div class="flex justify-between text-base text-neutral-500 mb-2">
+            <span>3s Avg</span>
+            <span id="power3sAvg" class="text-white tabular-nums">-- W</span>
+          </div>
+          <div class="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+            <div
+              id="powerBar"
+              class="h-full bg-purple-500 w-[0%] rounded-full transition-all duration-300"
+            ></div>
+          </div>
+        </div>
+      </div>
 
-        <!-- Metric Card: Heart Rate -->
-        <div class="group relative flex flex-col justify-between rounded-[32px] bg-neutral-900/40 border border-white/5 p-8 backdrop-blur-sm transition duration-500 hover:bg-neutral-900/60 hover:border-white/10">
-            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 to-red-600 opacity-80"></div>
-            <div class="flex items-start justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="p-2.5 rounded-xl bg-rose-500/10 text-rose-400">
-                        <i data-lucide="heart" class="w-6 h-6"></i>
-                    </div>
-                    <span class="text-sm font-medium tracking-widest text-neutral-400 uppercase">Heart Rate</span>
-                </div>
-                <span id="hrLiveBadge" class="text-sm font-medium text-rose-400 animate-pulsefast">Live</span>
+      <!-- Metric Card: Heart Rate -->
+      <div
+        class="group relative flex flex-col justify-between rounded-[32px] bg-neutral-900/40 border border-white/5 p-8 backdrop-blur-sm transition duration-500 hover:bg-neutral-900/60 hover:border-white/10"
+      >
+        <div
+          class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 to-red-600 opacity-80"
+        ></div>
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-3">
+            <div class="p-2.5 rounded-xl bg-rose-500/10 text-rose-400">
+              <i data-lucide="heart" class="w-6 h-6"></i>
             </div>
-            <div class="flex items-baseline gap-2 mt-2">
-                <span id="heartRate" class="text-9xl font-medium tracking-tighter text-white tabular-nums group-hover:scale-105 transition-transform duration-500 origin-left">--</span>
-                <span class="text-2xl text-neutral-500 font-medium">BPM</span>
-            </div>
-            <div class="mt-auto">
-                <div class="flex justify-between text-base text-neutral-500 mb-2">
-                    <span>Max</span>
-                    <span id="maxHeartRate" class="text-white tabular-nums">-- BPM</span>
-                </div>
-                <div class="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden">
-                    <div id="hrBar" class="h-full bg-rose-500 w-[0%] rounded-full transition-all duration-300"></div>
-                </div>
-            </div>
+            <span
+              class="text-sm font-medium tracking-widest text-neutral-400 uppercase"
+              >Heart Rate</span
+            >
+          </div>
+          <span
+            id="hrLiveBadge"
+            class="text-sm font-medium text-rose-400 animate-pulsefast"
+            >Live</span
+          >
         </div>
+        <div class="flex items-baseline gap-2 mt-2">
+          <span
+            id="heartRate"
+            class="text-9xl font-medium tracking-tighter text-white tabular-nums group-hover:scale-105 transition-transform duration-500 origin-left"
+            >--</span
+          >
+          <span class="text-2xl text-neutral-500 font-medium">BPM</span>
+        </div>
+        <div class="mt-auto">
+          <div class="flex justify-between text-base text-neutral-500 mb-2">
+            <span>Max</span>
+            <span id="maxHeartRate" class="text-white tabular-nums"
+              >-- BPM</span
+            >
+          </div>
+          <div class="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+            <div
+              id="hrBar"
+              class="h-full bg-rose-500 w-[0%] rounded-full transition-all duration-300"
+            ></div>
+          </div>
+        </div>
+      </div>
 
-        <!-- Metric Card: Cadence -->
-        <div class="group relative flex flex-col justify-between rounded-[32px] bg-neutral-900/40 border border-white/5 p-8 backdrop-blur-sm transition duration-500 hover:bg-neutral-900/60 hover:border-white/10">
-            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-cyan-400 opacity-80"></div>
-            <div class="flex items-start justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
-                        <i data-lucide="gauge-circle" class="w-6 h-6"></i>
-                    </div>
-                    <span class="text-sm font-medium tracking-widest text-neutral-400 uppercase">Cadence</span>
-                </div>
+      <!-- Metric Card: Cadence -->
+      <div
+        class="group relative flex flex-col justify-between rounded-[32px] bg-neutral-900/40 border border-white/5 p-8 backdrop-blur-sm transition duration-500 hover:bg-neutral-900/60 hover:border-white/10"
+      >
+        <div
+          class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-cyan-400 opacity-80"
+        ></div>
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-3">
+            <div class="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
+              <i data-lucide="gauge-circle" class="w-6 h-6"></i>
             </div>
-            <div class="flex items-baseline gap-2 mt-2">
-                <span id="cadence" class="text-9xl font-medium tracking-tighter text-white tabular-nums group-hover:scale-105 transition-transform duration-500 origin-left">--</span>
-                <span class="text-2xl text-neutral-500 font-medium">RPM</span>
-            </div>
-            <div class="mt-auto">
-                <div id="cadenceBars" class="grid grid-cols-8 gap-1 h-8 items-end opacity-50">
-                    <div class="bg-blue-500 w-full rounded-sm h-[10%]"></div>
-                    <div class="bg-blue-500 w-full rounded-sm h-[10%]"></div>
-                    <div class="bg-blue-500 w-full rounded-sm h-[10%]"></div>
-                    <div class="bg-blue-500 w-full rounded-sm h-[10%]"></div>
-                    <div class="bg-blue-500 w-full rounded-sm h-[10%]"></div>
-                    <div class="bg-blue-500 w-full rounded-sm h-[10%]"></div>
-                    <div class="bg-blue-500 w-full rounded-sm h-[10%]"></div>
-                    <div class="bg-blue-500 w-full rounded-sm h-[10%]"></div>
-                </div>
-            </div>
+            <span
+              class="text-sm font-medium tracking-widest text-neutral-400 uppercase"
+              >Cadence</span
+            >
+          </div>
         </div>
+        <div class="flex items-baseline gap-2 mt-2">
+          <span
+            id="cadence"
+            class="text-9xl font-medium tracking-tighter text-white tabular-nums group-hover:scale-105 transition-transform duration-500 origin-left"
+            >--</span
+          >
+          <span class="text-2xl text-neutral-500 font-medium">RPM</span>
+        </div>
+        <div class="mt-auto">
+          <div
+            id="cadenceBars"
+            class="grid grid-cols-8 gap-1 h-8 items-end opacity-50"
+          >
+            <div class="bg-blue-500 w-full rounded-sm h-[10%]"></div>
+            <div class="bg-blue-500 w-full rounded-sm h-[10%]"></div>
+            <div class="bg-blue-500 w-full rounded-sm h-[10%]"></div>
+            <div class="bg-blue-500 w-full rounded-sm h-[10%]"></div>
+            <div class="bg-blue-500 w-full rounded-sm h-[10%]"></div>
+            <div class="bg-blue-500 w-full rounded-sm h-[10%]"></div>
+            <div class="bg-blue-500 w-full rounded-sm h-[10%]"></div>
+            <div class="bg-blue-500 w-full rounded-sm h-[10%]"></div>
+          </div>
+        </div>
+      </div>
 
-        <!-- Metric Card: Speed -->
-        <div class="group relative flex flex-col justify-between rounded-[32px] bg-neutral-900/40 border border-white/5 p-8 backdrop-blur-sm transition duration-500 hover:bg-neutral-900/60 hover:border-white/10">
-            <div class="flex items-start justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400">
-                        <i data-lucide="gauge" class="w-6 h-6"></i>
-                    </div>
-                    <span class="text-sm font-medium tracking-widest text-neutral-400 uppercase">Speed</span>
-                </div>
+      <!-- Metric Card: Speed -->
+      <div
+        class="group relative flex flex-col justify-between rounded-[32px] bg-neutral-900/40 border border-white/5 p-8 backdrop-blur-sm transition duration-500 hover:bg-neutral-900/60 hover:border-white/10"
+      >
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-3">
+            <div class="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400">
+              <i data-lucide="gauge" class="w-6 h-6"></i>
             </div>
-            <div class="flex items-baseline gap-2 mt-2">
-                <span id="speed" class="text-9xl font-medium tracking-tighter text-white tabular-nums group-hover:scale-105 transition-transform duration-500 origin-left">--</span>
-                <span class="text-2xl text-neutral-500 font-medium">KPH</span>
-            </div>
-            <div class="mt-auto">
-                 <div class="flex justify-between text-base text-neutral-500 pt-4 border-t border-white/5">
-                    <span>Avg Speed</span>
-                    <span id="averageSpeed" class="text-white tabular-nums">--</span>
-                </div>
-            </div>
+            <span
+              class="text-sm font-medium tracking-widest text-neutral-400 uppercase"
+              >Speed</span
+            >
+          </div>
         </div>
+        <div class="flex items-baseline gap-2 mt-2">
+          <span
+            id="speed"
+            class="text-9xl font-medium tracking-tighter text-white tabular-nums group-hover:scale-105 transition-transform duration-500 origin-left"
+            >--</span
+          >
+          <span class="text-2xl text-neutral-500 font-medium">KPH</span>
+        </div>
+        <div class="mt-auto">
+          <div
+            class="flex justify-between text-base text-neutral-500 pt-4 border-t border-white/5"
+          >
+            <span>Avg Speed</span>
+            <span id="averageSpeed" class="text-white tabular-nums">--</span>
+          </div>
+        </div>
+      </div>
 
-        <!-- Metric Card: Distance / Elevation -->
-        <div class="group relative flex flex-col justify-between rounded-[32px] bg-neutral-900/40 border border-white/5 p-8 backdrop-blur-sm transition duration-500 hover:bg-neutral-900/60 hover:border-white/10">
-            <div class="flex items-start justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="p-2.5 rounded-xl bg-amber-500/10 text-amber-400">
-                        <i data-lucide="route" class="w-6 h-6"></i>
-                    </div>
-                    <span class="text-sm font-medium tracking-widest text-neutral-400 uppercase">Distance</span>
-                </div>
+      <!-- Metric Card: Distance / Elevation -->
+      <div
+        class="group relative flex flex-col justify-between rounded-[32px] bg-neutral-900/40 border border-white/5 p-8 backdrop-blur-sm transition duration-500 hover:bg-neutral-900/60 hover:border-white/10"
+      >
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-3">
+            <div class="p-2.5 rounded-xl bg-amber-500/10 text-amber-400">
+              <i data-lucide="route" class="w-6 h-6"></i>
             </div>
-            <div class="flex items-baseline gap-2 mt-2">
-                <span id="distance" class="text-9xl font-medium tracking-tighter text-white tabular-nums group-hover:scale-105 transition-transform duration-500 origin-left">--</span>
-                <span class="text-2xl text-neutral-500 font-medium">km</span>
-            </div>
-            <div class="mt-auto">
-                <div class="flex justify-between text-base text-neutral-500 pt-4 border-t border-white/5">
-                    <span>Elevation</span>
-                    <span id="elevation" class="text-white tabular-nums">-- m</span>
-                </div>
-            </div>
+            <span
+              class="text-sm font-medium tracking-widest text-neutral-400 uppercase"
+              >Distance</span
+            >
+          </div>
         </div>
+        <div class="flex items-baseline gap-2 mt-2">
+          <span
+            id="distance"
+            class="text-9xl font-medium tracking-tighter text-white tabular-nums group-hover:scale-105 transition-transform duration-500 origin-left"
+            >--</span
+          >
+          <span class="text-2xl text-neutral-500 font-medium">km</span>
+        </div>
+        <div class="mt-auto">
+          <div
+            class="flex justify-between text-base text-neutral-500 pt-4 border-t border-white/5"
+          >
+            <span>Elevation</span>
+            <span id="elevation" class="text-white tabular-nums">-- m</span>
+          </div>
+        </div>
+      </div>
 
-        <!-- Metric Card: Core Temperature -->
-        <div class="group relative flex flex-col justify-between rounded-[32px] bg-neutral-900/40 border border-white/5 p-8 backdrop-blur-sm transition duration-500 hover:bg-neutral-900/60 hover:border-white/10">
-            <div class="flex items-start justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="p-2.5 rounded-xl bg-orange-500/10 text-orange-400">
-                        <i data-lucide="thermometer" class="w-6 h-6"></i>
-                    </div>
-                    <span class="text-sm font-medium tracking-widest text-neutral-400 uppercase">Core Temp</span>
-                </div>
+      <!-- Metric Card: Core Temperature -->
+      <div
+        class="group relative flex flex-col justify-between rounded-[32px] bg-neutral-900/40 border border-white/5 p-8 backdrop-blur-sm transition duration-500 hover:bg-neutral-900/60 hover:border-white/10"
+      >
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-3">
+            <div class="p-2.5 rounded-xl bg-orange-500/10 text-orange-400">
+              <i data-lucide="thermometer" class="w-6 h-6"></i>
             </div>
-            <div class="flex items-baseline gap-2 mt-2">
-                <span id="coreTemp" class="text-9xl font-medium tracking-tighter text-white tabular-nums group-hover:scale-105 transition-transform duration-500 origin-left">--</span>
-                <span class="text-2xl text-neutral-500 font-medium">°C</span>
-            </div>
-            <div class="mt-auto">
-                <div class="flex justify-between text-base text-neutral-500 pt-4 border-t border-white/5">
-                    <span>Trend</span>
-                    <span id="coreTempTrend" class="text-orange-400 flex items-center gap-1">
-                        -- <i data-lucide="minus" class="w-4 h-4"></i>
-                    </span>
-                </div>
-            </div>
+            <span
+              class="text-sm font-medium tracking-widest text-neutral-400 uppercase"
+              >Core Temp</span
+            >
+          </div>
         </div>
+        <div class="flex items-baseline gap-2 mt-2">
+          <span
+            id="coreTemp"
+            class="text-9xl font-medium tracking-tighter text-white tabular-nums group-hover:scale-105 transition-transform duration-500 origin-left"
+            >--</span
+          >
+          <span class="text-2xl text-neutral-500 font-medium">°C</span>
+        </div>
+        <div class="mt-auto">
+          <div
+            class="flex justify-between text-base text-neutral-500 pt-4 border-t border-white/5"
+          >
+            <span>Trend</span>
+            <span
+              id="coreTempTrend"
+              class="text-orange-400 flex items-center gap-1"
+            >
+              -- <i data-lucide="minus" class="w-4 h-4"></i>
+            </span>
+          </div>
+        </div>
+      </div>
     </main>
 
     <!-- Bottom Footer -->
-    <footer class="flex-none px-8 py-4 border-t border-white/5 bg-neutral-950 flex justify-between items-center text-neutral-500 text-base">
-        <div class="flex items-center gap-6">
-            <div class="flex items-center gap-2">
-                <i data-lucide="mountain" class="w-5 h-5"></i>
-                <span>Grade <span id="grade" class="text-white tabular-nums">--%</span></span>
-            </div>
-            <div class="h-1 w-1 rounded-full bg-neutral-700"></div>
-            <div class="flex items-center gap-2">
-                <i data-lucide="thermometer-sun" class="w-5 h-5"></i>
-                <span>Ambient <span id="temperature" class="text-white tabular-nums">--°C</span></span>
-            </div>
+    <footer
+      class="flex-none px-8 py-4 border-t border-white/5 bg-neutral-950 flex justify-between items-center text-neutral-500 text-base"
+    >
+      <div class="flex items-center gap-6">
+        <div class="flex items-center gap-2">
+          <i data-lucide="mountain" class="w-5 h-5"></i>
+          <span
+            >Grade
+            <span id="grade" class="text-white tabular-nums">--%</span></span
+          >
         </div>
-        <div class="flex items-center gap-4">
-             <span id="lastUpdate" class="uppercase tracking-widest text-xs font-semibold">--</span>
+        <div class="h-1 w-1 rounded-full bg-neutral-700"></div>
+        <div class="flex items-center gap-2">
+          <i data-lucide="thermometer-sun" class="w-5 h-5"></i>
+          <span
+            >Ambient
+            <span id="temperature" class="text-white tabular-nums"
+              >--°C</span
+            ></span
+          >
         </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <span
+          id="lastUpdate"
+          class="uppercase tracking-widest text-xs font-semibold"
+          >--</span
+        >
+      </div>
     </footer>
 
     <script src="/js/websocket-client.js"></script>
     <script src="/js/dashboard-renderer.js"></script>
     <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
+      // Initialize Lucide icons
+      lucide.createIcons();
 
-        // Initialize the dashboard
-        const client = new BravenWebSocketClient();
-        const renderer = new DashboardRenderer();
+      // Initialize the dashboard
+      const client = new BravenWebSocketClient();
+      const renderer = new DashboardRenderer();
 
-        client.onData((data) => {
-            renderer.update(data);
-        });
+      client.onData((data) => {
+        renderer.update(data);
+      });
 
-        client.onStatusChange((connected) => {
-            renderer.setConnectionStatus(connected);
-        });
+      client.onStatusChange((connected) => {
+        renderer.setConnectionStatus(connected);
+      });
 
-        client.connect();
+      client.connect();
     </script>
-</body>
+  </body>
 </html>
