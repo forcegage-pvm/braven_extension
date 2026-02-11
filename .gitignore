@@ -1,0 +1,55 @@
+# Built outputs
+*.iml
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Gradle
+.gradle/
+build/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Local config (contains SDK path & secrets)
+local.properties
+gradle.properties
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Kotlin
+*.class
+
+# Log files
+*.log
+
+# Android Studio Navigation editor temp files
+.navigation/
+
+# Android Studio captures folder
+captures/
+
+# Keystore files (do not commit signing keys)
+*.jks
+*.keystore
+
+# External native build folder generated in Android Studio 2.2 and later
+.externalNativeBuild/
+.cxx/
+
+# Google Services (uncomment if using Firebase/GMS)
+# google-services.json
+
+# Freeline
+freeline.py
+freeline/
+freeline_project_description.json

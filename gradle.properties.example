@@ -1,0 +1,10 @@
+# Project-wide Gradle settings.
+android.useAndroidX=true
+kotlin.code.style=official
+android.nonTransitiveRClass=true
+
+# GitHub Packages credentials for karoo-ext
+# Replace with your GitHub username and personal access token (read:packages scope)
+# Or set USERNAME and TOKEN environment variables
+gpr.user=YOUR_GITHUB_USERNAME
+gpr.key=YOUR_GITHUB_PAT_WITH_READ_PACKAGES

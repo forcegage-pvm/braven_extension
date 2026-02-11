@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.BravenDashboard" parent="android:Theme.Material.NoActionBar">
+        <item name="android:colorPrimary">#FF1A1A2E</item>
+        <item name="android:colorPrimaryDark">#FF0F0F1A</item>
+        <item name="android:colorAccent">#FF00D4FF</item>
+        <item name="android:windowBackground">#FF0F0F1A</item>
+    </style>
+</resources>

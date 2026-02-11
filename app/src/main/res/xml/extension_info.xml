@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ExtensionInfo
+    id="braven-dashboard"
+    displayName="@string/extension_name"
+    icon="@drawable/ic_braven"
+    scansDevices="false" />

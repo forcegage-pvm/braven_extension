@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Braven Athlete View</title>
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <style>
+        /* Athlete-specific: large, glanceable metrics only */
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 800px;
+        }
+
+        .dashboard-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .metric-card {
+            padding: 32px;
+        }
+
+        .metric-card .metric-value {
+            font-size: 5rem;
+        }
+
+        .metric-card .metric-label {
+            font-size: 0.9rem;
+        }
+
+        .metric-card .metric-unit {
+            font-size: 1rem;
+        }
+
+        .metric-card.primary {
+            grid-column: span 2;
+        }
+
+        .metric-card.primary .metric-value {
+            font-size: 8rem;
+        }
+
+        @media (max-width: 600px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            .metric-card.primary {
+                grid-column: span 1;
+            }
+            .metric-card.primary .metric-value {
+                font-size: 5rem;
+            }
+            .metric-card .metric-value {
+                font-size: 3.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="brand">
+                <h1 class="brand-name">BRAVEN</h1>
+                <span class="brand-sub" style="color: #00FF88;">ATHLETE VIEW</span>
+            </div>
+            <div class="connection-status" id="connectionStatus">
+                <span class="status-dot disconnected"></span>
+                <span class="status-text">Disconnected</span>
+            </div>
+        </header>
+
+        <main class="dashboard-grid">
+            <!-- Power — hero metric -->
+            <div class="metric-card primary">
+                <div class="metric-label">POWER</div>
+                <div class="metric-value" id="power">--</div>
+                <div class="metric-unit">W</div>
+            </div>
+
+            <!-- Heart Rate -->
+            <div class="metric-card accent-red">
+                <div class="metric-label">HEART RATE</div>
+                <div class="metric-value" id="heartRate">--</div>
+                <div class="metric-unit">BPM</div>
+            </div>
+
+            <!-- Cadence -->
+            <div class="metric-card accent-blue">
+                <div class="metric-label">CADENCE</div>
+                <div class="metric-value" id="cadence">--</div>
+                <div class="metric-unit">RPM</div>
+            </div>
+
+            <!-- Elapsed Time -->
+            <div class="metric-card">
+                <div class="metric-label">ELAPSED TIME</div>
+                <div class="metric-value time" id="elapsedTime">--:--</div>
+                <div class="metric-unit">&nbsp;</div>
+            </div>
+
+            <!-- Speed -->
+            <div class="metric-card">
+                <div class="metric-label">SPEED</div>
+                <div class="metric-value" id="speed">--</div>
+                <div class="metric-unit">km/h</div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/websocket-client.js"></script>
+    <script src="/js/dashboard-renderer.js"></script>
+    <script>
+        const client = new BravenWebSocketClient();
+        const renderer = new DashboardRenderer();
+
+        client.onData((data) => {
+            renderer.update(data);
+        });
+
+        client.onStatusChange((connected) => {
+            renderer.setConnectionStatus(connected);
+        });
+
+        client.connect();
+    </script>
+</body>
+</html>

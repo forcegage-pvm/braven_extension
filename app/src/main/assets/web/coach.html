@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Braven Coach View</title>
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <style>
+        /* Coach-specific overrides — all metrics visible, detailed layout */
+        .dashboard-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .metric-card.primary {
+            grid-column: span 2;
+            grid-row: span 2;
+        }
+
+        .metric-card.primary .metric-value {
+            font-size: 7rem;
+        }
+
+        .metric-card.accent-red {
+            grid-row: span 2;
+        }
+
+        .metric-card.accent-red .metric-value {
+            font-size: 4rem;
+        }
+
+        .gps-panel {
+            grid-column: span 4;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .gps-panel .gps-label {
+            color: #888;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .gps-panel .gps-value {
+            color: #ccc;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .metric-card.primary {
+                grid-column: span 2;
+                grid-row: span 1;
+            }
+            .metric-card.primary .metric-value {
+                font-size: 4rem;
+            }
+            .gps-panel {
+                grid-column: span 2;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="brand">
+                <h1 class="brand-name">BRAVEN</h1>
+                <span class="brand-sub">COACH VIEW</span>
+            </div>
+            <div class="connection-status" id="connectionStatus">
+                <span class="status-dot disconnected"></span>
+                <span class="status-text">Disconnected</span>
+            </div>
+        </header>
+
+        <main class="dashboard-grid">
+            <!-- Power — large hero card -->
+            <div class="metric-card primary">
+                <div class="metric-label">POWER</div>
+                <div class="metric-value" id="power">--</div>
+                <div class="metric-unit">W</div>
+            </div>
+
+            <!-- Heart Rate — prominent -->
+            <div class="metric-card accent-red">
+                <div class="metric-label">HEART RATE</div>
+                <div class="metric-value" id="heartRate">--</div>
+                <div class="metric-unit">BPM</div>
+            </div>
+
+            <!-- Cadence -->
+            <div class="metric-card accent-blue">
+                <div class="metric-label">CADENCE</div>
+                <div class="metric-value" id="cadence">--</div>
+                <div class="metric-unit">RPM</div>
+            </div>
+
+            <!-- Speed -->
+            <div class="metric-card">
+                <div class="metric-label">SPEED</div>
+                <div class="metric-value" id="speed">--</div>
+                <div class="metric-unit">km/h</div>
+            </div>
+
+            <!-- Elapsed Time -->
+            <div class="metric-card">
+                <div class="metric-label">ELAPSED TIME</div>
+                <div class="metric-value time" id="elapsedTime">--:--</div>
+                <div class="metric-unit">&nbsp;</div>
+            </div>
+
+            <!-- Distance -->
+            <div class="metric-card">
+                <div class="metric-label">DISTANCE</div>
+                <div class="metric-value" id="distance">--</div>
+                <div class="metric-unit">km</div>
+            </div>
+
+            <!-- Elevation -->
+            <div class="metric-card">
+                <div class="metric-label">ELEVATION</div>
+                <div class="metric-value" id="elevation">--</div>
+                <div class="metric-unit">m</div>
+            </div>
+
+            <!-- Grade -->
+            <div class="metric-card">
+                <div class="metric-label">GRADE</div>
+                <div class="metric-value" id="grade">--</div>
+                <div class="metric-unit">%</div>
+            </div>
+
+            <!-- Temperature -->
+            <div class="metric-card">
+                <div class="metric-label">TEMP</div>
+                <div class="metric-value" id="temperature">--</div>
+                <div class="metric-unit">°C</div>
+            </div>
+
+            <!-- GPS coordinates row -->
+            <div class="gps-panel">
+                <div>
+                    <div class="gps-label">Latitude</div>
+                    <div class="gps-value" id="latitude">--</div>
+                </div>
+                <div>
+                    <div class="gps-label">Longitude</div>
+                    <div class="gps-value" id="longitude">--</div>
+                </div>
+                <div>
+                    <div class="gps-label">Last Update</div>
+                    <div class="gps-value" id="lastUpdate">--</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/websocket-client.js"></script>
+    <script src="/js/dashboard-renderer.js"></script>
+    <script>
+        const client = new BravenWebSocketClient();
+        const renderer = new DashboardRenderer();
+
+        client.onData((data) => {
+            renderer.update(data);
+        });
+
+        client.onStatusChange((connected) => {
+            renderer.setConnectionStatus(connected);
+        });
+
+        client.connect();
+    </script>
+</body>
+</html>
