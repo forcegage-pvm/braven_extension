@@ -329,7 +329,12 @@
       const REDIRECT_DELAY = 5;
       const REFRESH_INTERVAL_MS = 10000; // Check every 10 seconds
 
-      let firebaseUrl = localStorage.getItem("braven-firebase-url") || "";
+      // Default Firebase URL - pre-configured for Braven Lab
+      const DEFAULT_FIREBASE_URL =
+        "https://braven-deee0-default-rtdb.us-central1.firebasedatabase.app";
+
+      let firebaseUrl =
+        localStorage.getItem("braven-firebase-url") || DEFAULT_FIREBASE_URL;
       let deviceId = localStorage.getItem("braven-device-id") || "braven-karoo";
       let redirectTimer = null;
       let refreshTimer = null;

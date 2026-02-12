@@ -18,7 +18,7 @@ android {
         // Firebase Realtime Database URL for cloud IP registration
         // Set this to your Firebase project URL, e.g., "https://your-project.firebaseio.com"
         // Leave empty to disable cloud registration
-        buildConfigField("String", "FIREBASE_URL", "\"\"")
+        buildConfigField("String", "FIREBASE_URL", "\"https://braven-deee0-default-rtdb.us-central1.firebasedatabase.app\"")
     }
 
     buildTypes {
