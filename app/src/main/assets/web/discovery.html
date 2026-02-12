@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Braven Dashboard - Discovery</title>
+    <style>
+      :root {
+        --bg-color: #1a1a2e;
+        --card-bg: #16213e;
+        --text-color: #eee;
+        --accent-color: #00d9ff;
+        --success-color: #00ff88;
+        --warning-color: #ffaa00;
+        --error-color: #ff4444;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg-color);
+        color: var(--text-color);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
+
+      .container {
+        max-width: 600px;
+        width: 100%;
+        text-align: center;
+      }
+
+      h1 {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        color: var(--accent-color);
+      }
+
+      .subtitle {
+        color: #888;
+        margin-bottom: 2rem;
+      }
+
+      .status-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .spinner {
+        width: 60px;
+        height: 60px;
+        border: 4px solid #333;
+        border-top-color: var(--accent-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1.5rem;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .status-text {
+        font-size: 1.2rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .progress-text {
+        color: #888;
+        font-size: 0.9rem;
+      }
+
+      .found {
+        display: none;
+      }
+
+      .found.visible {
+        display: block;
+      }
+
+      .found-url {
+        font-size: 1.5rem;
+        color: var(--success-color);
+        margin: 1rem 0;
+        word-break: break-all;
+      }
+
+      .btn {
+        display: inline-block;
+        padding: 0.8rem 2rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+        border: none;
+      }
+
+      .btn-primary {
+        background: var(--accent-color);
+        color: var(--bg-color);
+      }
+
+      .btn-primary:hover {
+        background: #00b8d9;
+        transform: translateY(-2px);
+      }
+
+      .btn-secondary {
+        background: #333;
+        color: var(--text-color);
+        margin-left: 0.5rem;
+      }
+
+      .btn-secondary:hover {
+        background: #444;
+      }
+
+      .manual-entry {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #333;
+      }
+
+      .manual-entry input {
+        background: #0d1b2a;
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 0.8rem 1rem;
+        color: var(--text-color);
+        font-size: 1rem;
+        width: 200px;
+        margin-right: 0.5rem;
+      }
+
+      .manual-entry input:focus {
+        outline: none;
+        border-color: var(--accent-color);
+      }
+
+      .error-message {
+        color: var(--error-color);
+        margin-top: 1rem;
+        display: none;
+      }
+
+      .error-message.visible {
+        display: block;
+      }
+
+      .view-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+      }
+
+      .settings {
+        margin-top: 2rem;
+        text-align: left;
+        font-size: 0.85rem;
+        color: #666;
+      }
+
+      .settings summary {
+        cursor: pointer;
+        color: #888;
+      }
+
+      .settings-content {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: #0d1b2a;
+        border-radius: 8px;
+      }
+
+      .settings label {
+        display: block;
+        margin-bottom: 0.5rem;
+      }
+
+      .settings input[type="text"] {
+        background: var(--card-bg);
+        border: 1px solid #333;
+        border-radius: 4px;
+        padding: 0.5rem;
+        color: var(--text-color);
+        width: 150px;
+        margin-left: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🚴 Braven Dashboard</h1>
+      <p class="subtitle">Auto-Discovery</p>
+
+      <div class="status-card">
+        <!-- Scanning State -->
+        <div id="scanning">
+          <div class="spinner"></div>
+          <p class="status-text">Searching for Karoo...</p>
+          <p class="progress-text" id="progress">
+            Trying mDNS: braven-karoo.local
+          </p>
+        </div>
+
+        <!-- Found State -->
+        <div id="found" class="found">
+          <p class="status-text" style="color: var(--success-color)">
+            ✓ Karoo Found!
+          </p>
+          <p class="found-url" id="foundUrl"></p>
+          <div class="view-buttons">
+            <a href="#" id="btnCoach" class="btn btn-primary">Coach View</a>
+            <a href="#" id="btnAthlete" class="btn btn-primary">Athlete View</a>
+            <a href="#" id="btnMain" class="btn btn-secondary"
+              >Main Dashboard</a
+            >
+          </div>
+        </div>
+
+        <!-- Not Found State -->
+        <div id="notFound" class="found">
+          <p class="status-text" style="color: var(--warning-color)">
+            ⚠ Karoo Not Found
+          </p>
+          <p class="progress-text">
+            Make sure the Karoo is on and connected to the same WiFi network.
+          </p>
+          <button
+            class="btn btn-primary"
+            onclick="startScan()"
+            style="margin-top: 1rem"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+
+      <div class="manual-entry">
+        <p style="margin-bottom: 1rem; color: #888">Or enter IP manually:</p>
+        <input type="text" id="manualIp" placeholder="192.168.x.x" />
+        <button class="btn btn-secondary" onclick="tryManualIp()">
+          Connect
+        </button>
+        <p class="error-message" id="manualError">
+          Could not connect to that address
+        </p>
+      </div>
+
+      <details class="settings">
+        <summary>Advanced Settings</summary>
+        <div class="settings-content">
+          <label>
+            Subnet prefix:
+            <input type="text" id="subnet" value="192.168.8" />
+          </label>
+          <label style="margin-top: 0.5rem">
+            Port:
+            <input type="text" id="port" value="8080" />
+          </label>
+          <p style="margin-top: 1rem; color: #666">
+            The scanner will check IPs from .1 to .254 in the specified subnet.
+          </p>
+        </div>
+      </details>
+    </div>
+
+    <script>
+      const SCAN_TIMEOUT = 500; // ms per IP
+      const BATCH_SIZE = 20; // IPs to scan in parallel
+
+      let foundUrl = null;
+
+      async function checkMdns() {
+        // Try mDNS first (works on most modern systems)
+        const mdnsUrls = [
+          "http://braven-karoo.local:8080",
+          "http://braven-karoo:8080",
+        ];
+
+        for (const url of mdnsUrls) {
+          updateProgress(`Trying mDNS: ${url}`);
+          try {
+            const response = await fetchWithTimeout(
+              `${url}/api/discovery`,
+              SCAN_TIMEOUT * 2,
+            );
+            if (response.ok) {
+              const data = await response.json();
+              if (data.service === "braven-dashboard") {
+                return url;
+              }
+            }
+          } catch (e) {
+            // mDNS not available or not resolving
+          }
+        }
+        return null;
+      }
+
+      async function scanSubnet() {
+        const subnet = document.getElementById("subnet").value || "192.168.8";
+        const port = document.getElementById("port").value || "8080";
+
+        // Scan in batches for performance
+        for (let start = 1; start <= 254; start += BATCH_SIZE) {
+          const end = Math.min(start + BATCH_SIZE - 1, 254);
+          updateProgress(`Scanning ${subnet}.${start} - ${subnet}.${end}...`);
+
+          const promises = [];
+          for (let i = start; i <= end; i++) {
+            const ip = `${subnet}.${i}`;
+            const url = `http://${ip}:${port}`;
+            promises.push(checkHost(url));
+          }
+
+          const results = await Promise.all(promises);
+          const found = results.find((r) => r !== null);
+          if (found) {
+            return found;
+          }
+        }
+
+        return null;
+      }
+
+      async function checkHost(baseUrl) {
+        try {
+          const response = await fetchWithTimeout(
+            `${baseUrl}/api/discovery`,
+            SCAN_TIMEOUT,
+          );
+          if (response.ok) {
+            const data = await response.json();
+            if (data.service === "braven-dashboard") {
+              return baseUrl;
+            }
+          }
+        } catch (e) {
+          // Host not responding
+        }
+        return null;
+      }
+
+      function fetchWithTimeout(url, timeout) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+        return fetch(url, {
+          signal: controller.signal,
+          mode: "cors",
+        }).finally(() => clearTimeout(timeoutId));
+      }
+
+      function updateProgress(text) {
+        document.getElementById("progress").textContent = text;
+      }
+
+      function showFound(url) {
+        foundUrl = url;
+        document.getElementById("scanning").style.display = "none";
+        document.getElementById("notFound").style.display = "none";
+        document.getElementById("found").style.display = "block";
+        document.getElementById("foundUrl").textContent = url;
+
+        document.getElementById("btnCoach").href = `${url}/coach`;
+        document.getElementById("btnAthlete").href = `${url}/athlete`;
+        document.getElementById("btnMain").href = url;
+
+        // Save for next time
+        localStorage.setItem("braven-karoo-url", url);
+      }
+
+      function showNotFound() {
+        document.getElementById("scanning").style.display = "none";
+        document.getElementById("found").style.display = "none";
+        document.getElementById("notFound").style.display = "block";
+      }
+
+      function showScanning() {
+        document.getElementById("scanning").style.display = "block";
+        document.getElementById("found").style.display = "none";
+        document.getElementById("notFound").style.display = "none";
+      }
+
+      async function startScan() {
+        showScanning();
+
+        // Check if we have a saved URL that still works
+        const savedUrl = localStorage.getItem("braven-karoo-url");
+        if (savedUrl) {
+          updateProgress(`Checking saved address: ${savedUrl}`);
+          const result = await checkHost(savedUrl);
+          if (result) {
+            showFound(result);
+            return;
+          }
+        }
+
+        // Try mDNS
+        let found = await checkMdns();
+        if (found) {
+          showFound(found);
+          return;
+        }
+
+        // Fall back to subnet scan
+        updateProgress("mDNS not available, scanning network...");
+        found = await scanSubnet();
+
+        if (found) {
+          showFound(found);
+        } else {
+          showNotFound();
+        }
+      }
+
+      async function tryManualIp() {
+        const ip = document.getElementById("manualIp").value.trim();
+        const port = document.getElementById("port").value || "8080";
+        const errorEl = document.getElementById("manualError");
+
+        if (!ip) {
+          errorEl.textContent = "Please enter an IP address";
+          errorEl.classList.add("visible");
+          return;
+        }
+
+        errorEl.classList.remove("visible");
+        const url = `http://${ip}:${port}`;
+
+        try {
+          const result = await checkHost(url);
+          if (result) {
+            showFound(result);
+          } else {
+            errorEl.textContent = "Braven Dashboard not found at that address";
+            errorEl.classList.add("visible");
+          }
+        } catch (e) {
+          errorEl.textContent = "Could not connect to that address";
+          errorEl.classList.add("visible");
+        }
+      }
+
+      // Auto-detect subnet from current page URL (if served from Karoo)
+      function detectSubnet() {
+        try {
+          const currentHost = window.location.hostname;
+          if (currentHost && currentHost.match(/^\d+\.\d+\.\d+\.\d+$/)) {
+            const parts = currentHost.split(".");
+            if (parts.length === 4) {
+              document.getElementById("subnet").value =
+                `${parts[0]}.${parts[1]}.${parts[2]}`;
+            }
+          }
+        } catch (e) {
+          // Ignore
+        }
+      }
+
+      // Start on page load
+      document.addEventListener("DOMContentLoaded", () => {
+        detectSubnet();
+        startScan();
+      });
+
+      // Handle Enter key in manual IP input
+      document.getElementById("manualIp").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          tryManualIp();
+        }
+      });
+    </script>
+  </body>
+</html>

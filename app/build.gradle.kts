@@ -14,6 +14,11 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
+
+        // Firebase Realtime Database URL for cloud IP registration
+        // Set this to your Firebase project URL, e.g., "https://your-project.firebaseio.com"
+        // Leave empty to disable cloud registration
+        buildConfigField("String", "FIREBASE_URL", "\"\"")
     }
 
     buildTypes {

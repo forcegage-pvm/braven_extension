@@ -55,6 +55,18 @@ class WebServer(
                     it.addHeader("Access-Control-Allow-Origin", "*")
                 }
             }
+            uri == "/api/discovery" -> {
+                // Discovery endpoint for lab displays to find the Karoo
+                val discoveryJson = """{"service":"braven-dashboard","version":"1.0","port":$port}"""
+                return NanoHTTPD.newFixedLengthResponse(
+                    NanoHTTPD.Response.Status.OK,
+                    "application/json",
+                    discoveryJson,
+                ).also {
+                    it.addHeader("Access-Control-Allow-Origin", "*")
+                }
+            }
+            uri == "/discovery" || uri == "/discovery.html" -> "web/discovery.html"
             else -> {
                 return NanoHTTPD.newFixedLengthResponse(
                     NanoHTTPD.Response.Status.NOT_FOUND,

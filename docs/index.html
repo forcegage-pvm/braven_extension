@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Braven Lab Dashboard - Connect</title>
+    <style>
+      :root {
+        --bg-color: #1a1a2e;
+        --card-bg: #16213e;
+        --text-color: #eee;
+        --accent-color: #00d9ff;
+        --success-color: #00ff88;
+        --warning-color: #ffaa00;
+        --error-color: #ff4444;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg-color);
+        color: var(--text-color);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
+
+      .container {
+        max-width: 600px;
+        width: 100%;
+        text-align: center;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        color: var(--accent-color);
+      }
+
+      .subtitle {
+        color: #888;
+        margin-bottom: 2rem;
+        font-size: 1.1rem;
+      }
+
+      .status-card {
+        background: var(--card-bg);
+        border-radius: 16px;
+        padding: 2.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .spinner {
+        width: 60px;
+        height: 60px;
+        border: 4px solid #333;
+        border-top-color: var(--accent-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1.5rem;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .status-text {
+        font-size: 1.3rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .status-detail {
+        color: #888;
+        font-size: 0.95rem;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .found-url {
+        font-size: 1.5rem;
+        color: var(--success-color);
+        margin: 1rem 0;
+        word-break: break-all;
+      }
+
+      .btn {
+        display: inline-block;
+        padding: 1rem 2rem;
+        border-radius: 10px;
+        font-size: 1rem;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+        border: none;
+        font-weight: 600;
+        margin: 0.5rem;
+      }
+
+      .btn-primary {
+        background: var(--accent-color);
+        color: var(--bg-color);
+      }
+
+      .btn-primary:hover {
+        background: #00b8d9;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 217, 255, 0.3);
+      }
+
+      .btn-secondary {
+        background: #333;
+        color: var(--text-color);
+      }
+
+      .btn-secondary:hover {
+        background: #444;
+      }
+
+      .timestamp {
+        font-size: 0.85rem;
+        color: #666;
+        margin-top: 1rem;
+      }
+
+      .setup-needed {
+        text-align: left;
+        margin-top: 2rem;
+      }
+
+      .setup-needed h3 {
+        color: var(--warning-color);
+        margin-bottom: 1rem;
+      }
+
+      .setup-needed ol {
+        margin-left: 1.5rem;
+        line-height: 1.8;
+      }
+
+      .setup-needed code {
+        background: #0d1b2a;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.9rem;
+      }
+
+      .config-form {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #333;
+      }
+
+      .config-form input {
+        background: #0d1b2a;
+        border: 2px solid #333;
+        border-radius: 10px;
+        padding: 0.8rem 1rem;
+        color: var(--text-color);
+        font-size: 1rem;
+        width: 100%;
+        max-width: 400px;
+        margin-bottom: 1rem;
+      }
+
+      .config-form input:focus {
+        outline: none;
+        border-color: var(--accent-color);
+      }
+
+      .countdown {
+        color: var(--accent-color);
+        font-weight: bold;
+      }
+
+      .auto-redirect-note {
+        background: #0d1b2a;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-top: 1rem;
+        font-size: 0.9rem;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🚴 Braven Lab Dashboard</h1>
+      <p class="subtitle">Cloud-Based Karoo Discovery</p>
+
+      <div class="status-card">
+        <!-- Loading State -->
+        <div id="loading">
+          <div class="spinner"></div>
+          <p class="status-text">Checking for Karoo...</p>
+          <p class="status-detail" id="loadingDetail">
+            Connecting to Firebase...
+          </p>
+        </div>
+
+        <!-- Found State -->
+        <div id="found" class="hidden">
+          <p class="status-text" style="color: var(--success-color)">
+            ✓ Karoo Online!
+          </p>
+          <p class="found-url" id="foundUrl"></p>
+          <p class="timestamp" id="lastSeen"></p>
+          <div class="auto-redirect-note">
+            Auto-redirecting in
+            <span id="countdown" class="countdown">5</span> seconds...
+          </div>
+          <div style="margin-top: 1.5rem">
+            <a href="#" id="btnCoach" class="btn btn-primary">Coach View</a>
+            <a href="#" id="btnAthlete" class="btn btn-primary">Athlete View</a>
+            <a href="#" id="btnMain" class="btn btn-secondary">Dashboard</a>
+          </div>
+        </div>
+
+        <!-- Offline State -->
+        <div id="offline" class="hidden">
+          <p class="status-text" style="color: var(--warning-color)">
+            ⚠ Karoo Offline
+          </p>
+          <p class="status-detail">
+            The Karoo hasn't reported its status recently.<br />
+            Make sure the device is powered on and connected to WiFi.
+          </p>
+          <p class="timestamp" id="lastSeenOffline"></p>
+          <button
+            class="btn btn-primary"
+            onclick="checkStatus()"
+            style="margin-top: 1.5rem"
+          >
+            Refresh
+          </button>
+        </div>
+
+        <!-- Not Configured State -->
+        <div id="notConfigured" class="hidden">
+          <p class="status-text" style="color: var(--error-color)">
+            Setup Required
+          </p>
+          <p class="status-detail">Enter your Firebase Database URL below.</p>
+
+          <div class="config-form">
+            <input
+              type="text"
+              id="firebaseUrl"
+              placeholder="https://your-project.firebaseio.com"
+            />
+            <br />
+            <input
+              type="text"
+              id="deviceId"
+              placeholder="Device ID (default: braven-karoo)"
+              value="braven-karoo"
+            />
+            <br />
+            <button class="btn btn-primary" onclick="saveConfig()">
+              Connect
+            </button>
+          </div>
+
+          <div class="setup-needed">
+            <h3>First Time Setup:</h3>
+            <ol>
+              <li>
+                Create a
+                <a
+                  href="https://console.firebase.google.com/"
+                  target="_blank"
+                  style="color: var(--accent-color)"
+                  >Firebase project</a
+                >
+              </li>
+              <li>Go to Realtime Database → Create Database</li>
+              <li>
+                Set rules to allow read/write (for testing):<br />
+                <code>{ "rules": { ".read": true, ".write": true } }</code>
+              </li>
+              <li>
+                Copy your database URL (e.g.,
+                <code>https://xyz.firebaseio.com</code>)
+              </li>
+              <li>Enter it above</li>
+              <li>
+                Update <code>FIREBASE_URL</code> in your app's build.gradle.kts
+              </li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="error" class="hidden">
+          <p class="status-text" style="color: var(--error-color)">
+            Connection Error
+          </p>
+          <p class="status-detail" id="errorDetail"></p>
+          <button
+            class="btn btn-secondary"
+            onclick="checkStatus()"
+            style="margin-top: 1.5rem"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+
+      <p style="color: #666; font-size: 0.85rem">
+        Bookmark this page for easy access to your Karoo dashboard.
+      </p>
+    </div>
+
+    <script>
+      const STALE_THRESHOLD_MS = 120000; // 2 minutes - consider offline if no update
+      const REDIRECT_DELAY = 5;
+      const REFRESH_INTERVAL_MS = 10000; // Check every 10 seconds
+
+      let firebaseUrl = localStorage.getItem("braven-firebase-url") || "";
+      let deviceId = localStorage.getItem("braven-device-id") || "braven-karoo";
+      let redirectTimer = null;
+      let refreshTimer = null;
+
+      function showState(state) {
+        ["loading", "found", "offline", "notConfigured", "error"].forEach(
+          (s) => {
+            document.getElementById(s).classList.toggle("hidden", s !== state);
+          },
+        );
+
+        // Stop redirect timer when changing states
+        if (state !== "found" && redirectTimer) {
+          clearInterval(redirectTimer);
+          redirectTimer = null;
+        }
+      }
+
+      function formatTimestamp(timestamp) {
+        if (!timestamp) return "Unknown";
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diffMs = now - date;
+
+        if (diffMs < 60000) {
+          return "Just now";
+        } else if (diffMs < 3600000) {
+          const mins = Math.floor(diffMs / 60000);
+          return `${mins} minute${mins > 1 ? "s" : ""} ago`;
+        } else if (diffMs < 86400000) {
+          const hours = Math.floor(diffMs / 3600000);
+          return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+        } else {
+          return date.toLocaleString();
+        }
+      }
+
+      async function checkStatus() {
+        if (!firebaseUrl) {
+          showState("notConfigured");
+          return;
+        }
+
+        showState("loading");
+        document.getElementById("loadingDetail").textContent =
+          "Fetching device status...";
+
+        try {
+          const url = `${firebaseUrl}/devices/${deviceId}.json`;
+          const response = await fetch(url);
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          if (!data || !data.ip) {
+            document.getElementById("loadingDetail").textContent =
+              "No device data found";
+            setTimeout(() => showState("offline"), 1000);
+            document.getElementById("lastSeenOffline").textContent =
+              "Device has never connected";
+            return;
+          }
+
+          const now = Date.now();
+          const lastUpdate = data.timestamp || 0;
+          const isStale = now - lastUpdate > STALE_THRESHOLD_MS;
+
+          if (isStale) {
+            showState("offline");
+            document.getElementById("lastSeenOffline").textContent =
+              `Last seen: ${formatTimestamp(lastUpdate)}`;
+          } else {
+            showFound(data);
+          }
+        } catch (e) {
+          console.error("Firebase fetch error:", e);
+          showState("error");
+          document.getElementById("errorDetail").textContent =
+            `Could not connect to Firebase: ${e.message}`;
+        }
+      }
+
+      function showFound(data) {
+        const url = data.url || `http://${data.ip}:${data.port || 8080}`;
+
+        showState("found");
+        document.getElementById("foundUrl").textContent = url;
+        document.getElementById("lastSeen").textContent =
+          `Last update: ${formatTimestamp(data.timestamp)}`;
+
+        document.getElementById("btnCoach").href = `${url}/coach`;
+        document.getElementById("btnAthlete").href = `${url}/athlete`;
+        document.getElementById("btnMain").href = url;
+
+        // Start auto-redirect countdown
+        startRedirectCountdown(url);
+      }
+
+      function startRedirectCountdown(url) {
+        if (redirectTimer) {
+          clearInterval(redirectTimer);
+        }
+
+        let seconds = REDIRECT_DELAY;
+        const countdownEl = document.getElementById("countdown");
+        countdownEl.textContent = seconds;
+
+        redirectTimer = setInterval(() => {
+          seconds--;
+          countdownEl.textContent = seconds;
+
+          if (seconds <= 0) {
+            clearInterval(redirectTimer);
+            window.location.href = `${url}/coach`;
+          }
+        }, 1000);
+      }
+
+      function saveConfig() {
+        const urlInput = document.getElementById("firebaseUrl").value.trim();
+        const idInput =
+          document.getElementById("deviceId").value.trim() || "braven-karoo";
+
+        if (!urlInput) {
+          alert("Please enter a Firebase Database URL");
+          return;
+        }
+
+        // Clean up URL - remove trailing slash
+        firebaseUrl = urlInput.replace(/\/$/, "");
+        deviceId = idInput;
+
+        localStorage.setItem("braven-firebase-url", firebaseUrl);
+        localStorage.setItem("braven-device-id", deviceId);
+
+        checkStatus();
+      }
+
+      // Cancel redirect when clicking buttons
+      document.querySelectorAll(".btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          if (redirectTimer && btn.getAttribute("href")) {
+            clearInterval(redirectTimer);
+            redirectTimer = null;
+          }
+        });
+      });
+
+      // Handle Enter key in config form
+      document
+        .getElementById("firebaseUrl")
+        .addEventListener("keypress", (e) => {
+          if (e.key === "Enter") saveConfig();
+        });
+
+      document.getElementById("deviceId").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") saveConfig();
+      });
+
+      // Start on page load
+      document.addEventListener("DOMContentLoaded", () => {
+        // Pre-fill saved values
+        if (firebaseUrl) {
+          document.getElementById("firebaseUrl").value = firebaseUrl;
+        }
+        if (deviceId) {
+          document.getElementById("deviceId").value = deviceId;
+        }
+
+        checkStatus();
+
+        // Set up periodic refresh
+        refreshTimer = setInterval(() => {
+          // Only refresh if we're showing found or offline state
+          const foundEl = document.getElementById("found");
+          const offlineEl = document.getElementById("offline");
+          if (
+            !foundEl.classList.contains("hidden") ||
+            !offlineEl.classList.contains("hidden")
+          ) {
+            // Refresh silently (don't show loading spinner)
+            silentRefresh();
+          }
+        }, REFRESH_INTERVAL_MS);
+      });
+
+      async function silentRefresh() {
+        if (!firebaseUrl) return;
+
+        try {
+          const url = `${firebaseUrl}/devices/${deviceId}.json`;
+          const response = await fetch(url);
+          if (!response.ok) return;
+
+          const data = await response.json();
+          if (!data || !data.ip) return;
+
+          const now = Date.now();
+          const lastUpdate = data.timestamp || 0;
+          const isStale = now - lastUpdate > STALE_THRESHOLD_MS;
+
+          // Update last seen time
+          const foundEl = document.getElementById("found");
+          if (!foundEl.classList.contains("hidden")) {
+            document.getElementById("lastSeen").textContent =
+              `Last update: ${formatTimestamp(lastUpdate)}`;
+
+            // If became stale, switch to offline
+            if (isStale) {
+              showState("offline");
+              document.getElementById("lastSeenOffline").textContent =
+                `Last seen: ${formatTimestamp(lastUpdate)}`;
+            }
+          } else {
+            // If was offline but now online, switch to found
+            if (!isStale) {
+              showFound(data);
+            } else {
+              document.getElementById("lastSeenOffline").textContent =
+                `Last seen: ${formatTimestamp(lastUpdate)}`;
+            }
+          }
+        } catch (e) {
+          console.error("Silent refresh error:", e);
+        }
+      }
+    </script>
+  </body>
+</html>

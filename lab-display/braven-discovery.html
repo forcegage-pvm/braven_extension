@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Braven Lab Dashboard - Auto Discovery</title>
+    <style>
+      :root {
+        --bg-color: #1a1a2e;
+        --card-bg: #16213e;
+        --text-color: #eee;
+        --accent-color: #00d9ff;
+        --success-color: #00ff88;
+        --warning-color: #ffaa00;
+        --error-color: #ff4444;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg-color);
+        color: var(--text-color);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
+
+      .container {
+        max-width: 700px;
+        width: 100%;
+        text-align: center;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        color: var(--accent-color);
+      }
+
+      .subtitle {
+        color: #888;
+        margin-bottom: 2rem;
+        font-size: 1.1rem;
+      }
+
+      .status-card {
+        background: var(--card-bg);
+        border-radius: 16px;
+        padding: 2.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .spinner {
+        width: 80px;
+        height: 80px;
+        border: 5px solid #333;
+        border-top-color: var(--accent-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1.5rem;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .status-text {
+        font-size: 1.4rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .progress-text {
+        color: #888;
+        font-size: 1rem;
+      }
+
+      .found {
+        display: none;
+      }
+
+      .found.visible {
+        display: block;
+      }
+
+      .found-url {
+        font-size: 1.8rem;
+        color: var(--success-color);
+        margin: 1.5rem 0;
+        word-break: break-all;
+      }
+
+      .btn {
+        display: inline-block;
+        padding: 1rem 2.5rem;
+        border-radius: 10px;
+        font-size: 1.1rem;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+        border: none;
+        font-weight: 600;
+      }
+
+      .btn-primary {
+        background: var(--accent-color);
+        color: var(--bg-color);
+      }
+
+      .btn-primary:hover {
+        background: #00b8d9;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 217, 255, 0.3);
+      }
+
+      .btn-secondary {
+        background: #333;
+        color: var(--text-color);
+      }
+
+      .btn-secondary:hover {
+        background: #444;
+      }
+
+      .view-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 1.5rem;
+      }
+
+      .manual-entry {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #333;
+      }
+
+      .manual-entry input {
+        background: #0d1b2a;
+        border: 2px solid #333;
+        border-radius: 10px;
+        padding: 1rem 1.2rem;
+        color: var(--text-color);
+        font-size: 1.1rem;
+        width: 200px;
+        margin-right: 0.5rem;
+      }
+
+      .manual-entry input:focus {
+        outline: none;
+        border-color: var(--accent-color);
+      }
+
+      .error-message {
+        color: var(--error-color);
+        margin-top: 1rem;
+        display: none;
+      }
+
+      .error-message.visible {
+        display: block;
+      }
+
+      .settings {
+        margin-top: 2rem;
+        text-align: left;
+        font-size: 0.9rem;
+        color: #666;
+      }
+
+      .settings summary {
+        cursor: pointer;
+        color: #888;
+        padding: 0.5rem;
+      }
+
+      .settings-content {
+        margin-top: 1rem;
+        padding: 1.5rem;
+        background: #0d1b2a;
+        border-radius: 10px;
+      }
+
+      .settings label {
+        display: block;
+        margin-bottom: 0.75rem;
+      }
+
+      .settings input[type="text"] {
+        background: var(--card-bg);
+        border: 1px solid #333;
+        border-radius: 6px;
+        padding: 0.6rem;
+        color: var(--text-color);
+        width: 150px;
+        margin-left: 0.5rem;
+      }
+
+      .auto-connect-info {
+        background: #0d1b2a;
+        border-radius: 10px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 1.5rem;
+        font-size: 0.9rem;
+        color: #888;
+      }
+
+      .countdown {
+        color: var(--accent-color);
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🚴 Braven Lab Dashboard</h1>
+      <p class="subtitle">Automatic Karoo Discovery</p>
+
+      <div class="auto-connect-info">
+        💡 This page will automatically find and connect to the Karoo device on
+        your network.
+        <br />Keep this file on your lab display and open it to start
+        monitoring.
+      </div>
+
+      <div class="status-card">
+        <!-- Scanning State -->
+        <div id="scanning">
+          <div class="spinner"></div>
+          <p class="status-text">Searching for Karoo...</p>
+          <p class="progress-text" id="progress">Checking saved address...</p>
+        </div>
+
+        <!-- Found State -->
+        <div id="found" class="found">
+          <p class="status-text" style="color: var(--success-color)">
+            ✓ Karoo Found!
+          </p>
+          <p class="found-url" id="foundUrl"></p>
+          <p class="progress-text">
+            Auto-redirecting in
+            <span id="countdown" class="countdown">3</span> seconds...
+          </p>
+          <div class="view-buttons">
+            <a href="#" id="btnCoach" class="btn btn-primary">Coach View</a>
+            <a href="#" id="btnAthlete" class="btn btn-primary">Athlete View</a>
+            <a href="#" id="btnMain" class="btn btn-secondary"
+              >Main Dashboard</a
+            >
+          </div>
+        </div>
+
+        <!-- Not Found State -->
+        <div id="notFound" class="found">
+          <p class="status-text" style="color: var(--warning-color)">
+            ⚠ Karoo Not Found
+          </p>
+          <p class="progress-text">
+            Make sure:<br />
+            • Karoo is powered on<br />
+            • Connected to the same WiFi network<br />
+            • Braven extension is running
+          </p>
+          <button
+            class="btn btn-primary"
+            onclick="startScan()"
+            style="margin-top: 1.5rem"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+
+      <div class="manual-entry">
+        <p style="margin-bottom: 1rem; color: #888">
+          Or enter Karoo IP manually:
+        </p>
+        <input type="text" id="manualIp" placeholder="192.168.x.x" />
+        <button class="btn btn-secondary" onclick="tryManualIp()">
+          Connect
+        </button>
+        <p class="error-message" id="manualError">
+          Could not connect to that address
+        </p>
+      </div>
+
+      <details class="settings">
+        <summary>⚙️ Advanced Settings</summary>
+        <div class="settings-content">
+          <label>
+            Subnet prefix:
+            <input type="text" id="subnet" value="192.168.8" />
+          </label>
+          <label>
+            Port:
+            <input type="text" id="port" value="8080" />
+          </label>
+          <label style="margin-top: 1rem">
+            <input type="checkbox" id="autoRedirect" checked />
+            Auto-redirect to Coach view when found
+          </label>
+          <p style="margin-top: 1rem; color: #666; font-size: 0.85rem">
+            The scanner will check IPs from .1 to .254 in the specified subnet.
+          </p>
+        </div>
+      </details>
+    </div>
+
+    <script>
+      const SCAN_TIMEOUT = 400; // ms per IP
+      const BATCH_SIZE = 25; // IPs to scan in parallel
+      const REDIRECT_DELAY = 3; // seconds before auto-redirect
+
+      let foundUrl = null;
+      let redirectTimer = null;
+
+      async function checkMdns() {
+        const mdnsUrls = [
+          "http://braven-karoo.local:8080",
+          "http://braven-karoo:8080",
+        ];
+
+        for (const url of mdnsUrls) {
+          updateProgress(`Trying mDNS: ${url}`);
+          try {
+            const response = await fetchWithTimeout(
+              `${url}/api/discovery`,
+              SCAN_TIMEOUT * 3,
+            );
+            if (response.ok) {
+              const data = await response.json();
+              if (data.service === "braven-dashboard") {
+                return url;
+              }
+            }
+          } catch (e) {
+            // mDNS not available
+          }
+        }
+        return null;
+      }
+
+      async function scanSubnet() {
+        const subnet = document.getElementById("subnet").value || "192.168.8";
+        const port = document.getElementById("port").value || "8080";
+
+        for (let start = 1; start <= 254; start += BATCH_SIZE) {
+          const end = Math.min(start + BATCH_SIZE - 1, 254);
+          updateProgress(`Scanning ${subnet}.${start} - ${subnet}.${end}...`);
+
+          const promises = [];
+          for (let i = start; i <= end; i++) {
+            const ip = `${subnet}.${i}`;
+            const url = `http://${ip}:${port}`;
+            promises.push(checkHost(url));
+          }
+
+          const results = await Promise.all(promises);
+          const found = results.find((r) => r !== null);
+          if (found) {
+            return found;
+          }
+        }
+
+        return null;
+      }
+
+      async function checkHost(baseUrl) {
+        try {
+          const response = await fetchWithTimeout(
+            `${baseUrl}/api/discovery`,
+            SCAN_TIMEOUT,
+          );
+          if (response.ok) {
+            const data = await response.json();
+            if (data.service === "braven-dashboard") {
+              return baseUrl;
+            }
+          }
+        } catch (e) {
+          // Host not responding
+        }
+        return null;
+      }
+
+      function fetchWithTimeout(url, timeout) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+        return fetch(url, {
+          signal: controller.signal,
+          mode: "cors",
+        }).finally(() => clearTimeout(timeoutId));
+      }
+
+      function updateProgress(text) {
+        document.getElementById("progress").textContent = text;
+      }
+
+      function showFound(url) {
+        foundUrl = url;
+        document.getElementById("scanning").style.display = "none";
+        document.getElementById("notFound").style.display = "none";
+        document.getElementById("found").style.display = "block";
+        document.getElementById("foundUrl").textContent = url;
+
+        document.getElementById("btnCoach").href = `${url}/coach`;
+        document.getElementById("btnAthlete").href = `${url}/athlete`;
+        document.getElementById("btnMain").href = url;
+
+        // Save for next time
+        localStorage.setItem("braven-karoo-url", url);
+
+        // Start auto-redirect countdown
+        const autoRedirect = document.getElementById("autoRedirect").checked;
+        if (autoRedirect) {
+          startRedirectCountdown();
+        }
+      }
+
+      function startRedirectCountdown() {
+        let seconds = REDIRECT_DELAY;
+        const countdownEl = document.getElementById("countdown");
+        countdownEl.textContent = seconds;
+
+        redirectTimer = setInterval(() => {
+          seconds--;
+          countdownEl.textContent = seconds;
+
+          if (seconds <= 0) {
+            clearInterval(redirectTimer);
+            window.location.href = `${foundUrl}/coach`;
+          }
+        }, 1000);
+      }
+
+      function showNotFound() {
+        document.getElementById("scanning").style.display = "none";
+        document.getElementById("found").style.display = "none";
+        document.getElementById("notFound").style.display = "block";
+      }
+
+      function showScanning() {
+        if (redirectTimer) {
+          clearInterval(redirectTimer);
+          redirectTimer = null;
+        }
+        document.getElementById("scanning").style.display = "block";
+        document.getElementById("found").style.display = "none";
+        document.getElementById("notFound").style.display = "none";
+      }
+
+      async function startScan() {
+        showScanning();
+
+        // Check saved URL first
+        const savedUrl = localStorage.getItem("braven-karoo-url");
+        if (savedUrl) {
+          updateProgress(`Checking saved address: ${savedUrl}`);
+          const result = await checkHost(savedUrl);
+          if (result) {
+            showFound(result);
+            return;
+          }
+        }
+
+        // Try mDNS
+        updateProgress("Trying mDNS discovery...");
+        let found = await checkMdns();
+        if (found) {
+          showFound(found);
+          return;
+        }
+
+        // Fall back to subnet scan
+        updateProgress("Scanning network...");
+        found = await scanSubnet();
+
+        if (found) {
+          showFound(found);
+        } else {
+          showNotFound();
+        }
+      }
+
+      async function tryManualIp() {
+        const ip = document.getElementById("manualIp").value.trim();
+        const port = document.getElementById("port").value || "8080";
+        const errorEl = document.getElementById("manualError");
+
+        if (!ip) {
+          errorEl.textContent = "Please enter an IP address";
+          errorEl.classList.add("visible");
+          return;
+        }
+
+        errorEl.classList.remove("visible");
+        const url = `http://${ip}:${port}`;
+
+        try {
+          const result = await checkHost(url);
+          if (result) {
+            showFound(result);
+          } else {
+            errorEl.textContent = "Braven Dashboard not found at that address";
+            errorEl.classList.add("visible");
+          }
+        } catch (e) {
+          errorEl.textContent = "Could not connect to that address";
+          errorEl.classList.add("visible");
+        }
+      }
+
+      // Start on page load
+      document.addEventListener("DOMContentLoaded", () => {
+        startScan();
+      });
+
+      // Handle Enter key
+      document.getElementById("manualIp").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          tryManualIp();
+        }
+      });
+
+      // Cancel redirect when clicking buttons manually
+      document.querySelectorAll(".btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (redirectTimer) {
+            clearInterval(redirectTimer);
+            redirectTimer = null;
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
