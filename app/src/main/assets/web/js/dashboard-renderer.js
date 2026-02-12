@@ -18,6 +18,11 @@ class DashboardRenderer {
       batteryIcon: document.getElementById("batteryIcon"),
       distance: document.getElementById("distance"),
 
+      // Time Strip (Prominent timers)
+      sessionTime: document.getElementById("sessionTime"),
+      lapTimeBig: document.getElementById("lapTimeBig"),
+      lapNumberBig: document.getElementById("lapNumberBig"),
+
       // Power (Primary)
       power: document.getElementById("power"),
       power3sAvg: document.getElementById("power3sAvg"),
@@ -431,6 +436,20 @@ class DashboardRenderer {
   // ═══════════════════════════════════════════════════════
 
   _updateHeader(data) {
+    // Time Strip - Session Time (prominent)
+    if (this._els.sessionTime && data.elapsedTime !== undefined) {
+      this._els.sessionTime.textContent = this._formatTime(data.elapsedTime);
+    }
+    // Time Strip - Lap Time (prominent)
+    if (this._els.lapTimeBig && data.lapTime !== undefined) {
+      this._els.lapTimeBig.textContent = data.lapTime > 0 ? this._formatTime(data.lapTime) : "00:00";
+    }
+    // Time Strip - Lap Number
+    if (this._els.lapNumberBig && data.lapNumber !== undefined) {
+      this._els.lapNumberBig.textContent = data.lapNumber > 0 ? data.lapNumber : "1";
+    }
+
+    // Header bar elapsed (smaller, for reference)
     if (this._els.elapsedTime && data.elapsedTime !== undefined) {
       this._els.elapsedTime.textContent = this._formatTime(data.elapsedTime);
     }

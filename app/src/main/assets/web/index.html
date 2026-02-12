@@ -140,6 +140,30 @@
       </div>
     </header>
 
+    <!-- ═══════════════ TIME STRIP - Session & Lap Timers ═══════════════ -->
+    <div class="flex-none flex items-center justify-center gap-12 px-6 py-3 bg-neutral-900/50 border-b border-white/5">
+      <!-- Session Time -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 text-neutral-500">
+          <i data-lucide="timer" class="w-5 h-5"></i>
+          <span class="text-sm font-medium uppercase tracking-wide">Session</span>
+        </div>
+        <span id="sessionTime" class="text-3xl font-bold tabular-nums text-white tracking-tight">00:00:00</span>
+      </div>
+      
+      <!-- Divider -->
+      <div class="h-8 w-px bg-white/10"></div>
+      
+      <!-- Lap Time -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 text-neutral-500">
+          <i data-lucide="flag" class="w-5 h-5"></i>
+          <span class="text-sm font-medium uppercase tracking-wide">Lap <span id="lapNumberBig" class="text-amber-400">1</span></span>
+        </div>
+        <span id="lapTimeBig" class="text-3xl font-bold tabular-nums text-amber-400 tracking-tight">00:00</span>
+      </div>
+    </div>
+
     <!-- Main Dashboard - Primary Metrics Focus -->
     <main
       class="flex-grow p-4 grid grid-cols-4 gap-4 relative overflow-hidden"
