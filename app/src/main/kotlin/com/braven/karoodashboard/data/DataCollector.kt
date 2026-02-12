@@ -104,6 +104,70 @@ class DataCollector(private val karooSystem: KarooSystemService) {
             _currentState.update { it.copy(batteryPercent = value.toInt(), timestamp = now()) }
         }
 
+        // ==================== LAP DATA ====================
+
+        // Lap Number (current lap)
+        collectSingleValue(DataType.Type.LAP_NUMBER) { value ->
+            _currentState.update { it.copy(lapNumber = value.toInt(), timestamp = now()) }
+        }
+
+        // Lap Power - Avg power output this lap
+        collectSingleValue(DataType.Type.POWER_LAP) { value ->
+            _currentState.update { it.copy(lapPower = value.toInt(), timestamp = now()) }
+        }
+
+        // Lap Time - Duration of current lap (ms from SDK)
+        collectSingleValue(DataType.Type.ELAPSED_TIME_LAP) { value ->
+            _currentState.update { it.copy(lapTime = (value / 1000.0).toLong(), timestamp = now()) }
+        }
+
+        // Lap Speed - Avg speed this lap (m/s)
+        collectSingleValue(DataType.Type.AVERAGE_SPEED_LAP) { value ->
+            _currentState.update { it.copy(lapSpeed = value, timestamp = now()) }
+        }
+
+        // Lap Heart Rate - Avg HR this lap
+        collectSingleValue(DataType.Type.AVERAGE_LAP_HR) { value ->
+            _currentState.update { it.copy(lapHeartRate = value.toInt(), timestamp = now()) }
+        }
+
+        // Lap Cadence - Avg cadence this lap
+        collectSingleValue(DataType.Type.CADENCE_LAP) { value ->
+            _currentState.update { it.copy(lapCadence = value.toInt(), timestamp = now()) }
+        }
+
+        // Lap Distance - Distance traveled this lap (meters)
+        collectSingleValue(DataType.Type.DISTANCE_LAP) { value ->
+            _currentState.update { it.copy(lapDistance = value, timestamp = now()) }
+        }
+
+        // Lap Normalized Power® - NP this lap
+        collectSingleValue(DataType.Type.NORMALIZED_POWER_LAP) { value ->
+            _currentState.update { it.copy(lapNormalizedPower = value.toInt(), timestamp = now()) }
+        }
+
+        // Lap Max Power - Max power output this lap
+        collectSingleValue(DataType.Type.MAX_POWER_LAP) { value ->
+            _currentState.update { it.copy(lapMaxPower = value.toInt(), timestamp = now()) }
+        }
+
+        // ==================== LAST LAP DATA ====================
+
+        // Last Lap Power - Avg power previous lap
+        collectSingleValue(DataType.Type.AVERAGE_POWER_LAST_LAP) { value ->
+            _currentState.update { it.copy(lastLapPower = value.toInt(), timestamp = now()) }
+        }
+
+        // Last Lap Time - Duration of previous lap (ms from SDK)
+        collectSingleValue(DataType.Type.ELAPSED_TIME_LAST_LAP) { value ->
+            _currentState.update { it.copy(lastLapTime = (value / 1000.0).toLong(), timestamp = now()) }
+        }
+
+        // Last Lap Speed - Avg speed previous lap
+        collectSingleValue(DataType.Type.AVERAGE_SPEED_LAST_LAP) { value ->
+            _currentState.update { it.copy(lastLapSpeed = value, timestamp = now()) }
+        }
+
         // GPS Location — multi-field data point
         scope.launch {
             karooSystem.streamDataFlow(DataType.Type.LOCATION).collect { state ->

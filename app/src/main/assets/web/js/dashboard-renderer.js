@@ -1,15 +1,14 @@
 /**
- * Braven Lab Dashboard — Dashboard Renderer (Tailwind Edition)
+ * Braven Lab Dashboard — Dashboard Renderer with Sparkline Graphs
  *
  * Updates the DOM elements with live ride data received from WebSocket.
- * Handles zone badges, progress bars, cadence histogram,
- * core-temp trend tracking, battery display, and connection status.
+ * Features sparkline graphs for Power, VO2, Heart Rate, and Cadence.
  */
 class DashboardRenderer {
   constructor() {
-    // Cache DOM references — null-safe for multi-page support
+    // Cache DOM references
     this._els = {
-      // Header
+      // Header / Status
       connectionBadge: document.getElementById("connectionBadge"),
       pingDot: document.getElementById("pingDot"),
       solidDot: document.getElementById("solidDot"),
@@ -17,171 +16,307 @@ class DashboardRenderer {
       elapsedTime: document.getElementById("elapsedTime"),
       batteryPercent: document.getElementById("batteryPercent"),
       batteryIcon: document.getElementById("batteryIcon"),
+      distance: document.getElementById("distance"),
 
-      // Power card
+      // Power (Primary)
       power: document.getElementById("power"),
-      powerZoneBadge: document.getElementById("powerZoneBadge"),
       power3sAvg: document.getElementById("power3sAvg"),
-      powerBar: document.getElementById("powerBar"),
+      powerZoneBadge: document.getElementById("powerZoneBadge"),
+      lapPower: document.getElementById("lapPower"),
+      lapNormalizedPower: document.getElementById("lapNormalizedPower"),
+      lapMaxPower: document.getElementById("lapMaxPower"),
+      powerGraph: document.getElementById("powerGraph"),
 
-      // Heart Rate card
+      // VO2 (Placeholder)
+      vo2: document.getElementById("vo2"),
+      vo2Percent: document.getElementById("vo2Percent"),
+      vo2LiveBadge: document.getElementById("vo2LiveBadge"),
+      vo2Graph: document.getElementById("vo2Graph"),
+
+      // Heart Rate
       heartRate: document.getElementById("heartRate"),
       maxHeartRate: document.getElementById("maxHeartRate"),
-      hrBar: document.getElementById("hrBar"),
+      lapHeartRate: document.getElementById("lapHeartRate"),
       hrLiveBadge: document.getElementById("hrLiveBadge"),
+      hrGraph: document.getElementById("hrGraph"),
 
-      // Cadence card
+      // Cadence
       cadence: document.getElementById("cadence"),
-      cadenceBars: document.getElementById("cadenceBars"),
+      avgCadence: document.getElementById("avgCadence"),
+      lapCadence: document.getElementById("lapCadence"),
+      cadenceGraph: document.getElementById("cadenceGraph"),
 
-      // Speed card
+      // Speed (Secondary)
       speed: document.getElementById("speed"),
       averageSpeed: document.getElementById("averageSpeed"),
+      lapSpeed: document.getElementById("lapSpeed"),
 
-      // Distance card
-      distance: document.getElementById("distance"),
-      elevation: document.getElementById("elevation"),
+      // Lap Info
+      lapNumber: document.getElementById("lapNumber"),
+      lapTime: document.getElementById("lapTime"),
 
-      // Core Temp card
+      // Secondary Metrics
       coreTemp: document.getElementById("coreTemp"),
       coreTempTrend: document.getElementById("coreTempTrend"),
-
-      // Footer
-      grade: document.getElementById("grade"),
+      lastLapPower: document.getElementById("lastLapPower"),
+      lastLapTime: document.getElementById("lastLapTime"),
+      lastLapSpeed: document.getElementById("lastLapSpeed"),
       temperature: document.getElementById("temperature"),
-      lastUpdate: document.getElementById("lastUpdate"),
-
-      // Legacy (coach/athlete pages)
+      elevation: document.getElementById("elevation"),
+      grade: document.getElementById("grade"),
       latitude: document.getElementById("latitude"),
       longitude: document.getElementById("longitude"),
+      lastUpdate: document.getElementById("lastUpdate"),
     };
 
-    // Cadence rolling buffer for mini histogram (last 8 values)
+    // ─── Graph Data Buffers ───────────────────────────────
+    this._graphMaxPoints = 120; // ~2 minutes of data at 1Hz
+    this._powerHistory = [];
+    this._power3sHistory = [];
+    this._hrHistory = [];
     this._cadenceHistory = [];
-    this._maxCadenceHistory = 8;
+    this._vo2History = [];
 
-    // Core temp trend tracking
+    // ─── Graph Colors ─────────────────────────────────────
+    this._graphColors = {
+      power: {
+        line: "#a855f7",
+        fill: "rgba(168, 85, 247, 0.15)",
+        secondary: "#c4b5fd",
+      },
+      vo2: { line: "#06b6d4", fill: "rgba(6, 182, 212, 0.15)" },
+      hr: { line: "#f43f5e", fill: "rgba(244, 63, 94, 0.15)" },
+      cadence: { line: "#3b82f6", fill: "rgba(59, 130, 246, 0.15)" },
+    };
+
+    // ─── Tracking ─────────────────────────────────────────
     this._prevCoreTemp = null;
+    this._cadenceSum = 0;
+    this._cadenceCount = 0;
 
-    // FTP estimate for power bar (user can override; defaults to 300W)
-    this._ftpEstimate = 300;
-
-    // Max HR estimate for HR bar (defaults to 200)
-    this._maxHrEstimate = 200;
-
-    // Zone names
+    // Zone names for power
     this._zoneNames = ["", "Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7"];
+
+    // Initialize canvas contexts
+    this._initGraphs();
   }
 
-  /**
-   * Update all displayed metrics with new data.
-   * @param {Object} data — parsed JSON from WebSocket
-   */
+  // ═══════════════════════════════════════════════════════
+  // GRAPH INITIALIZATION
+  // ═══════════════════════════════════════════════════════
+
+  _initGraphs() {
+    this._powerCtx = this._getContext("powerGraph");
+    this._vo2Ctx = this._getContext("vo2Graph");
+    this._hrCtx = this._getContext("hrGraph");
+    this._cadenceCtx = this._getContext("cadenceGraph");
+
+    // Set up resize observer for responsive canvases
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(() => this._resizeCanvases());
+      ["powerGraph", "vo2Graph", "hrGraph", "cadenceGraph"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) observer.observe(el.parentElement);
+      });
+    }
+
+    // Initial resize
+    setTimeout(() => this._resizeCanvases(), 100);
+  }
+
+  _getContext(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    return canvas ? canvas.getContext("2d") : null;
+  }
+
+  _resizeCanvases() {
+    ["powerGraph", "vo2Graph", "hrGraph", "cadenceGraph"].forEach((id) => {
+      const canvas = document.getElementById(id);
+      if (canvas && canvas.parentElement) {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+      }
+    });
+    // Redraw after resize
+    this._drawAllGraphs();
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // MAIN UPDATE
+  // ═══════════════════════════════════════════════════════
+
   update(data) {
     this._updatePower(data);
+    this._updateVO2(data);
     this._updateHeartRate(data);
     this._updateCadence(data);
     this._updateSpeed(data);
-    this._updateDistance(data);
-    this._updateCoreTemp(data);
+    this._updateLapData(data);
+    this._updateSecondaryMetrics(data);
     this._updateHeader(data);
-    this._updateFooter(data);
-
-    // Legacy GPS (coach/athlete views)
-    if (this._els.latitude && data.latitude !== undefined) {
-      this._els.latitude.textContent = data.latitude.toFixed(6);
-    }
-    if (this._els.longitude && data.longitude !== undefined) {
-      this._els.longitude.textContent = data.longitude.toFixed(6);
-    }
+    this._drawAllGraphs();
   }
 
-  // ─── Power Card ──────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════
+  // POWER (Primary Metric)
+  // ═══════════════════════════════════════════════════════
 
   _updatePower(data) {
+    // Instant power
     if (this._els.power && data.power !== undefined) {
       this._els.power.textContent = data.power > 0 ? data.power : "--";
+
+      // Add to history
+      if (data.power > 0) {
+        this._powerHistory.push(data.power);
+        if (this._powerHistory.length > this._graphMaxPoints) {
+          this._powerHistory.shift();
+        }
+      }
     }
+
+    // 3-second average
     if (this._els.power3sAvg && data.power3sAvg !== undefined) {
       this._els.power3sAvg.textContent =
-        data.power3sAvg > 0 ? `${data.power3sAvg} W` : "-- W";
+        data.power3sAvg > 0 ? data.power3sAvg : "--";
+
+      // Add to 3s history
+      if (data.power3sAvg > 0) {
+        this._power3sHistory.push(data.power3sAvg);
+        if (this._power3sHistory.length > this._graphMaxPoints) {
+          this._power3sHistory.shift();
+        }
+      }
     }
+
+    // Power zone badge
     if (this._els.powerZoneBadge && data.powerZone !== undefined) {
-      const zoneName = this._zoneNames[data.powerZone] || "--";
       this._els.powerZoneBadge.textContent =
         data.powerZone > 0 ? `Zone ${data.powerZone}` : "--";
     }
-    if (this._els.powerBar && data.power !== undefined) {
-      const pct = Math.min(
-        100,
-        Math.max(0, (data.power / this._ftpEstimate) * 100),
-      );
-      this._els.powerBar.style.width = `${pct.toFixed(0)}%`;
+
+    // Lap power stats
+    if (this._els.lapPower && data.lapPower !== undefined) {
+      this._els.lapPower.textContent =
+        data.lapPower > 0 ? `${Math.round(data.lapPower)} W` : "-- W";
+    }
+    if (this._els.lapNormalizedPower && data.lapNormalizedPower !== undefined) {
+      this._els.lapNormalizedPower.textContent =
+        data.lapNormalizedPower > 0
+          ? `${Math.round(data.lapNormalizedPower)} W`
+          : "-- W";
+    }
+    if (this._els.lapMaxPower && data.lapMaxPower !== undefined) {
+      this._els.lapMaxPower.textContent =
+        data.lapMaxPower > 0 ? `${Math.round(data.lapMaxPower)} W` : "-- W";
     }
   }
 
-  // ─── Heart Rate Card ─────────────────────────────────────
+  // ═══════════════════════════════════════════════════════
+  // VO2 (Placeholder for future sensor)
+  // ═══════════════════════════════════════════════════════
+
+  _updateVO2(data) {
+    // VO2 sensor not yet connected - show placeholder
+    if (this._els.vo2) {
+      if (data.vo2 !== undefined && data.vo2 > 0) {
+        this._els.vo2.textContent = data.vo2.toFixed(1);
+        this._vo2History.push(data.vo2);
+        if (this._vo2History.length > this._graphMaxPoints) {
+          this._vo2History.shift();
+        }
+        if (this._els.vo2LiveBadge) {
+          this._els.vo2LiveBadge.textContent = "Live";
+          this._els.vo2LiveBadge.className =
+            "text-xs font-medium text-cyan-400 animate-pulsefast";
+        }
+      } else {
+        this._els.vo2.textContent = "--";
+        if (this._els.vo2LiveBadge) {
+          this._els.vo2LiveBadge.textContent = "Pending";
+          this._els.vo2LiveBadge.className =
+            "text-xs font-medium text-neutral-500";
+        }
+      }
+    }
+
+    if (this._els.vo2Percent) {
+      if (data.vo2Percent !== undefined && data.vo2Percent > 0) {
+        this._els.vo2Percent.textContent = `${data.vo2Percent.toFixed(0)}%`;
+      } else {
+        this._els.vo2Percent.textContent = "--%";
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // HEART RATE
+  // ═══════════════════════════════════════════════════════
 
   _updateHeartRate(data) {
     if (this._els.heartRate && data.heartRate !== undefined) {
       this._els.heartRate.textContent =
         data.heartRate > 0 ? data.heartRate : "--";
-    }
-    if (this._els.maxHeartRate && data.maxHeartRate !== undefined) {
-      this._els.maxHeartRate.textContent =
-        data.maxHeartRate > 0 ? `${data.maxHeartRate} BPM` : "-- BPM";
-      // Update max HR estimate for progress bar
-      if (data.maxHeartRate > 0) {
-        this._maxHrEstimate = Math.max(
-          this._maxHrEstimate,
-          data.maxHeartRate + 10,
-        );
+
+      if (data.heartRate > 0) {
+        this._hrHistory.push(data.heartRate);
+        if (this._hrHistory.length > this._graphMaxPoints) {
+          this._hrHistory.shift();
+        }
       }
     }
-    if (this._els.hrBar && data.heartRate !== undefined) {
-      const pct = Math.min(
-        100,
-        Math.max(0, (data.heartRate / this._maxHrEstimate) * 100),
-      );
-      this._els.hrBar.style.width = `${pct.toFixed(0)}%`;
+
+    if (this._els.maxHeartRate && data.maxHeartRate !== undefined) {
+      this._els.maxHeartRate.textContent =
+        data.maxHeartRate > 0 ? data.maxHeartRate : "--";
+    }
+
+    if (this._els.lapHeartRate && data.lapHeartRate !== undefined) {
+      this._els.lapHeartRate.textContent =
+        data.lapHeartRate > 0 ? Math.round(data.lapHeartRate) : "--";
     }
   }
 
-  // ─── Cadence Card ────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════
+  // CADENCE
+  // ═══════════════════════════════════════════════════════
 
   _updateCadence(data) {
     if (this._els.cadence && data.cadence !== undefined) {
       this._els.cadence.textContent = data.cadence > 0 ? data.cadence : "--";
-    }
 
-    // Update rolling histogram
-    if (data.cadence !== undefined && data.cadence > 0) {
-      this._cadenceHistory.push(data.cadence);
-      if (this._cadenceHistory.length > this._maxCadenceHistory) {
-        this._cadenceHistory.shift();
+      if (data.cadence > 0) {
+        this._cadenceHistory.push(data.cadence);
+        if (this._cadenceHistory.length > this._graphMaxPoints) {
+          this._cadenceHistory.shift();
+        }
+
+        // Track for average
+        this._cadenceSum += data.cadence;
+        this._cadenceCount++;
       }
-      this._renderCadenceBars();
     }
-  }
 
-  _renderCadenceBars() {
-    if (!this._els.cadenceBars) return;
-
-    const max = Math.max(...this._cadenceHistory, 120); // At least 120 RPM scale
-    const bars = this._els.cadenceBars.children;
-
-    for (let i = 0; i < bars.length; i++) {
-      const idx = this._cadenceHistory.length - bars.length + i;
-      if (idx >= 0 && idx < this._cadenceHistory.length) {
-        const pct = Math.max(10, (this._cadenceHistory[idx] / max) * 100);
-        bars[i].style.height = `${pct.toFixed(0)}%`;
+    if (this._els.avgCadence) {
+      if (this._cadenceCount > 0) {
+        this._els.avgCadence.textContent = Math.round(
+          this._cadenceSum / this._cadenceCount,
+        );
       } else {
-        bars[i].style.height = "10%";
+        this._els.avgCadence.textContent = "--";
       }
+    }
+
+    if (this._els.lapCadence && data.lapCadence !== undefined) {
+      this._els.lapCadence.textContent =
+        data.lapCadence > 0 ? Math.round(data.lapCadence) : "--";
     }
   }
 
-  // ─── Speed Card ──────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════
+  // SPEED (Secondary)
+  // ═══════════════════════════════════════════════════════
 
   _updateSpeed(data) {
     if (this._els.speed && data.speed !== undefined) {
@@ -192,105 +327,252 @@ class DashboardRenderer {
       this._els.averageSpeed.textContent =
         data.averageSpeed > 0 ? data.averageSpeed.toFixed(1) : "--";
     }
+    if (this._els.lapSpeed && data.lapSpeed !== undefined) {
+      this._els.lapSpeed.textContent =
+        data.lapSpeed > 0 ? data.lapSpeed.toFixed(1) : "--";
+    }
   }
 
-  // ─── Distance Card ───────────────────────────────────────
+  // ═══════════════════════════════════════════════════════
+  // LAP DATA
+  // ═══════════════════════════════════════════════════════
 
-  _updateDistance(data) {
-    if (this._els.distance && data.distance !== undefined) {
-      this._els.distance.textContent =
-        data.distance > 0 ? data.distance.toFixed(1) : "--";
+  _updateLapData(data) {
+    if (this._els.lapNumber && data.lapNumber !== undefined) {
+      this._els.lapNumber.textContent =
+        data.lapNumber > 0 ? data.lapNumber : "1";
+    }
+    if (this._els.lapTime && data.lapTime !== undefined) {
+      this._els.lapTime.textContent =
+        data.lapTime > 0 ? this._formatTime(data.lapTime) : "00:00";
+    }
+
+    // Last lap
+    if (this._els.lastLapPower && data.lastLapPower !== undefined) {
+      this._els.lastLapPower.textContent =
+        data.lastLapPower > 0 ? Math.round(data.lastLapPower) : "--";
+    }
+    if (this._els.lastLapTime && data.lastLapTime !== undefined) {
+      this._els.lastLapTime.textContent =
+        data.lastLapTime > 0 ? this._formatTime(data.lastLapTime) : "--";
+    }
+    if (this._els.lastLapSpeed && data.lastLapSpeed !== undefined) {
+      this._els.lastLapSpeed.textContent =
+        data.lastLapSpeed > 0 ? data.lastLapSpeed.toFixed(1) : "--";
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // SECONDARY METRICS
+  // ═══════════════════════════════════════════════════════
+
+  _updateSecondaryMetrics(data) {
+    // Core temp
+    if (this._els.coreTemp && data.coreTemp !== undefined) {
+      this._els.coreTemp.textContent =
+        data.coreTemp > 0 ? data.coreTemp.toFixed(1) : "--";
+
+      // Trend
+      if (this._els.coreTempTrend && data.coreTemp > 0) {
+        if (this._prevCoreTemp !== null) {
+          const delta = data.coreTemp - this._prevCoreTemp;
+          const sign = delta >= 0 ? "+" : "";
+          const iconName =
+            delta > 0.05
+              ? "arrow-up-right"
+              : delta < -0.05
+                ? "arrow-down-right"
+                : "minus";
+          const color =
+            delta > 0.05
+              ? "text-orange-400"
+              : delta < -0.05
+                ? "text-blue-400"
+                : "text-neutral-500";
+
+          this._els.coreTempTrend.className = `text-xs ${color} flex items-center gap-1`;
+          this._els.coreTempTrend.innerHTML = `${sign}${delta.toFixed(2)}° <i data-lucide="${iconName}" class="w-3 h-3"></i>`;
+
+          if (typeof lucide !== "undefined") {
+            lucide.createIcons({
+              nodes: this._els.coreTempTrend.querySelectorAll("[data-lucide]"),
+            });
+          }
+        }
+        this._prevCoreTemp = data.coreTemp;
+      }
+    }
+
+    // Environment
+    if (this._els.temperature && data.temperature !== undefined) {
+      this._els.temperature.textContent =
+        data.temperature > 0 ? data.temperature.toFixed(0) : "--";
     }
     if (this._els.elevation && data.elevation !== undefined) {
       this._els.elevation.textContent =
-        data.elevation > 0 ? `${data.elevation.toFixed(0)} m` : "-- m";
+        data.elevation > 0 ? Math.round(data.elevation) : "--";
+    }
+    if (this._els.grade && data.grade !== undefined) {
+      this._els.grade.textContent =
+        data.grade !== 0 ? data.grade.toFixed(1) : "0.0";
+    }
+
+    // GPS
+    if (this._els.latitude && data.latitude !== undefined) {
+      this._els.latitude.textContent = data.latitude.toFixed(5);
+    }
+    if (this._els.longitude && data.longitude !== undefined) {
+      this._els.longitude.textContent = data.longitude.toFixed(5);
     }
   }
 
-  // ─── Core Temp Card ──────────────────────────────────────
-
-  _updateCoreTemp(data) {
-    if (this._els.coreTemp && data.coreTemp !== undefined) {
-      if (data.coreTemp > 0) {
-        this._els.coreTemp.textContent = data.coreTemp.toFixed(1);
-      } else {
-        this._els.coreTemp.textContent = "--";
-      }
-    }
-
-    if (
-      this._els.coreTempTrend &&
-      data.coreTemp !== undefined &&
-      data.coreTemp > 0
-    ) {
-      if (this._prevCoreTemp !== null) {
-        const delta = data.coreTemp - this._prevCoreTemp;
-        const sign = delta >= 0 ? "+" : "";
-        const iconName =
-          delta > 0.05
-            ? "arrow-up-right"
-            : delta < -0.05
-              ? "arrow-down-right"
-              : "minus";
-        const color =
-          delta > 0.05
-            ? "text-orange-400"
-            : delta < -0.05
-              ? "text-blue-400"
-              : "text-neutral-400";
-
-        this._els.coreTempTrend.className = `${color} flex items-center gap-1`;
-        this._els.coreTempTrend.innerHTML = `${sign}${delta.toFixed(1)}° <i data-lucide="${iconName}" class="w-4 h-4"></i>`;
-
-        // Re-initialize the new icon
-        if (typeof lucide !== "undefined") {
-          lucide.createIcons({
-            nodes: this._els.coreTempTrend.querySelectorAll("[data-lucide]"),
-          });
-        }
-      }
-      this._prevCoreTemp = data.coreTemp;
-    }
-  }
-
-  // ─── Header (Timer, Battery) ─────────────────────────────
+  // ═══════════════════════════════════════════════════════
+  // HEADER
+  // ═══════════════════════════════════════════════════════
 
   _updateHeader(data) {
-    // Elapsed time
     if (this._els.elapsedTime && data.elapsedTime !== undefined) {
       this._els.elapsedTime.textContent = this._formatTime(data.elapsedTime);
     }
-
-    // Battery
+    if (this._els.distance && data.distance !== undefined) {
+      this._els.distance.textContent =
+        data.distance > 0 ? `${data.distance.toFixed(2)} km` : "0.00 km";
+    }
     if (this._els.batteryPercent && data.batteryPercent !== undefined) {
-      if (data.batteryPercent >= 0) {
-        this._els.batteryPercent.textContent = `${data.batteryPercent}%`;
-      } else {
-        this._els.batteryPercent.textContent = "--%";
-      }
-    }
-  }
-
-  // ─── Footer (Grade, Temp, Timestamp) ─────────────────────
-
-  _updateFooter(data) {
-    if (this._els.grade && data.grade !== undefined) {
-      this._els.grade.textContent = `${data.grade.toFixed(1)}%`;
-    }
-    if (this._els.temperature && data.temperature !== undefined) {
-      this._els.temperature.textContent = `${data.temperature.toFixed(1)}°C`;
+      this._els.batteryPercent.textContent =
+        data.batteryPercent >= 0 ? `${data.batteryPercent}%` : "--%";
     }
     if (this._els.lastUpdate) {
-      this._els.lastUpdate.textContent = new Date().toLocaleTimeString();
+      this._els.lastUpdate.textContent = `Updated ${new Date().toLocaleTimeString()}`;
     }
   }
 
-  // ─── Connection Status ───────────────────────────────────
+  // ═══════════════════════════════════════════════════════
+  // SPARKLINE GRAPH RENDERING
+  // ═══════════════════════════════════════════════════════
 
-  /**
-   * Update the connection status indicator in the header.
-   * @param {boolean} connected
-   */
+  _drawAllGraphs() {
+    this._drawSparkline(
+      this._powerCtx,
+      this._power3sHistory,
+      this._graphColors.power,
+      {
+        showFill: true,
+        secondary: this._powerHistory,
+        secondaryColor: this._graphColors.power.secondary,
+      },
+    );
+    this._drawSparkline(this._vo2Ctx, this._vo2History, this._graphColors.vo2, {
+      showFill: true,
+    });
+    this._drawSparkline(this._hrCtx, this._hrHistory, this._graphColors.hr, {
+      showFill: true,
+    });
+    this._drawSparkline(
+      this._cadenceCtx,
+      this._cadenceHistory,
+      this._graphColors.cadence,
+      { showFill: true },
+    );
+  }
+
+  _drawSparkline(ctx, data, colors, options = {}) {
+    if (!ctx || !data || data.length < 2) return;
+
+    const canvas = ctx.canvas;
+    const width = canvas.width;
+    const height = canvas.height;
+    const padding = 4;
+
+    // Clear
+    ctx.clearRect(0, 0, width, height);
+
+    // Calculate bounds
+    const min = Math.min(...data) * 0.9;
+    const max = Math.max(...data) * 1.1;
+    const range = max - min || 1;
+
+    const xStep = (width - padding * 2) / (data.length - 1);
+
+    // Helper to get Y position
+    const getY = (val) =>
+      height - padding - ((val - min) / range) * (height - padding * 2);
+
+    // Draw secondary line (instant power behind 3s avg)
+    if (
+      options.secondary &&
+      options.secondary.length > 1 &&
+      options.secondaryColor
+    ) {
+      ctx.beginPath();
+      ctx.strokeStyle = options.secondaryColor;
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.3;
+
+      const secMin = Math.min(...options.secondary) * 0.9;
+      const secMax = Math.max(...options.secondary) * 1.1;
+      const secRange = secMax - secMin || 1;
+      const secXStep = (width - padding * 2) / (options.secondary.length - 1);
+      const getSecY = (val) =>
+        height - padding - ((val - secMin) / secRange) * (height - padding * 2);
+
+      options.secondary.forEach((val, i) => {
+        const x = padding + i * secXStep;
+        const y = getSecY(val);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // Draw fill
+    if (options.showFill) {
+      ctx.beginPath();
+      ctx.moveTo(padding, height - padding);
+      data.forEach((val, i) => {
+        const x = padding + i * xStep;
+        const y = getY(val);
+        ctx.lineTo(x, y);
+      });
+      ctx.lineTo(padding + (data.length - 1) * xStep, height - padding);
+      ctx.closePath();
+      ctx.fillStyle = colors.fill;
+      ctx.fill();
+    }
+
+    // Draw main line
+    ctx.beginPath();
+    ctx.strokeStyle = colors.line;
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    data.forEach((val, i) => {
+      const x = padding + i * xStep;
+      const y = getY(val);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Draw current value dot
+    const lastX = padding + (data.length - 1) * xStep;
+    const lastY = getY(data[data.length - 1]);
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
+    ctx.fillStyle = colors.line;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, 2, 0, Math.PI * 2);
+    ctx.fillStyle = "#fff";
+    ctx.fill();
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // CONNECTION STATUS
+  // ═══════════════════════════════════════════════════════
+
   setConnectionStatus(connected) {
     const badge = this._els.connectionBadge;
     const ping = this._els.pingDot;
@@ -298,13 +580,9 @@ class DashboardRenderer {
     const text = this._els.connectionText;
 
     if (badge) {
-      if (connected) {
-        badge.className =
-          "flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20";
-      } else {
-        badge.className =
-          "flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20";
-      }
+      badge.className = connected
+        ? "flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20"
+        : "flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20";
     }
     if (ping) {
       ping.className = connected
@@ -318,19 +596,16 @@ class DashboardRenderer {
     }
     if (text) {
       text.className = connected
-        ? "text-sm font-medium text-green-500 tracking-wide uppercase"
-        : "text-sm font-medium text-red-500 tracking-wide uppercase";
-      text.textContent = connected ? "Live Stream" : "Disconnected";
+        ? "text-xs font-medium text-green-500 tracking-wide uppercase"
+        : "text-xs font-medium text-red-500 tracking-wide uppercase";
+      text.textContent = connected ? "Live" : "Disconnected";
     }
   }
 
-  // ─── Utilities ───────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════
+  // UTILITIES
+  // ═══════════════════════════════════════════════════════
 
-  /**
-   * Format elapsed seconds as HH:MM:SS or MM:SS.
-   * @param {number} totalSeconds
-   * @returns {string}
-   */
   _formatTime(totalSeconds) {
     const seconds = Math.floor(totalSeconds);
     const h = Math.floor(seconds / 3600);

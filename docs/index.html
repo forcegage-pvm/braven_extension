@@ -223,9 +223,9 @@
             <span id="countdown" class="countdown">5</span> seconds...
           </div>
           <div style="margin-top: 1.5rem">
-            <a href="#" id="btnCoach" class="btn btn-primary">Coach View</a>
-            <a href="#" id="btnAthlete" class="btn btn-primary">Athlete View</a>
-            <a href="#" id="btnMain" class="btn btn-secondary">Dashboard</a>
+            <a href="#" id="btnDashboard" class="btn btn-primary"
+              >Launch Dashboard</a
+            >
           </div>
         </div>
 
@@ -428,9 +428,7 @@
         document.getElementById("lastSeen").textContent =
           `Last update: ${formatTimestamp(data.timestamp)}`;
 
-        document.getElementById("btnCoach").href = `${url}/coach`;
-        document.getElementById("btnAthlete").href = `${url}/athlete`;
-        document.getElementById("btnMain").href = url;
+        document.getElementById("btnDashboard").href = url;
 
         // Start auto-redirect countdown
         startRedirectCountdown(url);
@@ -451,7 +449,7 @@
 
           if (seconds <= 0) {
             clearInterval(redirectTimer);
-            window.location.href = `${url}/coach`;
+            window.location.href = url;
           }
         }, 1000);
       }

@@ -22,6 +22,20 @@ data class SessionState(
     val batteryPercent: Int = -1,   // -1 = unavailable
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
+    // Lap data
+    val lapNumber: Int = 1,         // current lap number
+    val lapPower: Int = 0,          // avg power this lap (watts)
+    val lapTime: Long = 0L,         // elapsed time this lap (seconds)
+    val lapSpeed: Double = 0.0,     // avg speed this lap (m/s)
+    val lapHeartRate: Int = 0,      // avg HR this lap
+    val lapCadence: Int = 0,        // avg cadence this lap
+    val lapDistance: Double = 0.0,  // distance this lap (meters)
+    val lapNormalizedPower: Int = 0,// NP this lap
+    val lapMaxPower: Int = 0,       // max power this lap
+    // Last lap data
+    val lastLapPower: Int = 0,      // avg power previous lap
+    val lastLapTime: Long = 0L,     // duration previous lap (seconds)
+    val lastLapSpeed: Double = 0.0, // avg speed previous lap (m/s)
     val timestamp: Long = System.currentTimeMillis(),
 ) {
     /**
@@ -48,6 +62,20 @@ data class SessionState(
             append("\"batteryPercent\":$batteryPercent,")
             append("\"latitude\":$latitude,")
             append("\"longitude\":$longitude,")
+            // Lap data
+            append("\"lapNumber\":$lapNumber,")
+            append("\"lapPower\":$lapPower,")
+            append("\"lapTime\":$lapTime,")
+            append("\"lapSpeed\":${formatDouble(lapSpeed * 3.6, 1)},") // m/s → km/h
+            append("\"lapHeartRate\":$lapHeartRate,")
+            append("\"lapCadence\":$lapCadence,")
+            append("\"lapDistance\":${formatDouble(lapDistance / 1000.0, 2)},") // m → km
+            append("\"lapNormalizedPower\":$lapNormalizedPower,")
+            append("\"lapMaxPower\":$lapMaxPower,")
+            // Last lap data
+            append("\"lastLapPower\":$lastLapPower,")
+            append("\"lastLapTime\":$lastLapTime,")
+            append("\"lastLapSpeed\":${formatDouble(lastLapSpeed * 3.6, 1)},") // m/s → km/h
             append("\"timestamp\":$timestamp")
             append('}')
         }
