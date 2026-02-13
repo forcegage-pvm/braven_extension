@@ -185,6 +185,41 @@ class DataCollector(private val karooSystem: KarooSystemService) {
         Timber.i("DataCollector: All streams registered")
     }
 
+    /**
+     * Update the lactate value from a manual lab entry.
+     * Value persists in the session state until overwritten.
+     */
+    fun updateLactate(value: Double) {
+        _currentState.update {
+            it.copy(
+                lactate = value,
+                lactateTimestamp = System.currentTimeMillis(),
+                timestamp = now(),
+            )
+        }
+        Timber.i("DataCollector: Lactate updated to $value mmol/L")
+    }
+
+    /**
+     * Update trainer control state from FtmsController.
+     */
+    fun updateTrainerState(
+        state: String,
+        deviceName: String? = null,
+        targetPower: Int? = null,
+        error: String? = null,
+    ) {
+        _currentState.update {
+            it.copy(
+                trainerState = state,
+                trainerDeviceName = deviceName,
+                trainerTargetPower = targetPower,
+                trainerError = error,
+                timestamp = now(),
+            )
+        }
+    }
+
     fun stopCollecting() {
         Timber.i("DataCollector: Stopping data collection")
         scope.cancel()

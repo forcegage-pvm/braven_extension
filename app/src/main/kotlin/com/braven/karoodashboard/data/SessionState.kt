@@ -36,6 +36,14 @@ data class SessionState(
     val lastLapPower: Int = 0,      // avg power previous lap
     val lastLapTime: Long = 0L,     // duration previous lap (seconds)
     val lastLapSpeed: Double = 0.0, // avg speed previous lap (m/s)
+    // Lactate data (manual entry from lab)
+    val lactate: Double? = null,         // mmol/L, null = no reading taken yet
+    val lactateTimestamp: Long? = null,  // when the lactate was entered (unix ms)
+    // Trainer control state (KICKR via BLE FTMS)
+    val trainerState: String = "DISCONNECTED",  // DISCONNECTED, SCANNING, CONNECTING, CONNECTED, CONTROLLING, ERROR
+    val trainerDeviceName: String? = null,
+    val trainerTargetPower: Int? = null,
+    val trainerError: String? = null,
     val timestamp: Long = System.currentTimeMillis(),
 ) {
     /**
@@ -76,6 +84,14 @@ data class SessionState(
             append("\"lastLapPower\":$lastLapPower,")
             append("\"lastLapTime\":$lastLapTime,")
             append("\"lastLapSpeed\":${formatDouble(lastLapSpeed * 3.6, 1)},") // m/s → km/h
+            // Lactate data
+            append("\"lactate\":${lactate ?: "null"},")
+            append("\"lactateTimestamp\":${lactateTimestamp ?: "null"},")
+            // Trainer control state
+            append("\"trainerState\":\"$trainerState\",")
+            append("\"trainerDeviceName\":${trainerDeviceName?.let { "\"$it\"" } ?: "null"},")
+            append("\"trainerTargetPower\":${trainerTargetPower ?: "null"},")
+            append("\"trainerError\":${trainerError?.let { "\"$it\"" } ?: "null"},")
             append("\"timestamp\":$timestamp")
             append('}')
         }

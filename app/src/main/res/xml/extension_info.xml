@@ -3,4 +3,5 @@
     id="braven-dashboard"
     displayName="@string/extension_name"
     icon="@drawable/ic_braven"
-    scansDevices="false" />
+    scansDevices="false"
+    fitFile="true" />

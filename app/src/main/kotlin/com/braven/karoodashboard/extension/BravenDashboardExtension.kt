@@ -15,8 +15,22 @@ import com.braven.karoodashboard.data.DataCollector
 import com.braven.karoodashboard.server.IpAddressUtil
 import com.braven.karoodashboard.server.NetworkDiscoveryService
 import com.braven.karoodashboard.server.WebServer
+import com.braven.karoodashboard.trainer.FtmsController
 import io.hammerhead.karooext.KarooSystemService
 import io.hammerhead.karooext.extension.KarooExtension
+import io.hammerhead.karooext.internal.Emitter
+import io.hammerhead.karooext.models.DeveloperField
+import io.hammerhead.karooext.models.FieldValue
+import io.hammerhead.karooext.models.FitEffect
+import io.hammerhead.karooext.models.MarkLap
+import io.hammerhead.karooext.models.RequestBluetooth
+import io.hammerhead.karooext.models.ReleaseBluetooth
+import io.hammerhead.karooext.models.WriteToRecordMesg
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
@@ -42,6 +56,77 @@ class BravenDashboardExtension : KarooExtension("braven-dashboard", BuildConfig.
     private lateinit var dataCollector: DataCollector
     private lateinit var webServer: WebServer
     private lateinit var networkDiscovery: NetworkDiscoveryService
+    private lateinit var ftmsController: FtmsController
+
+    /** Coroutine scope for trainer state monitoring */
+    private val extensionScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    /** Whether BLE radio has been requested from Karoo OS */
+    @Volatile
+    private var bleRequested = false
+
+    // ─── FIT Developer Field: Lactate ───────────────────────
+    // FIT Base Type 136 = Float32 (IEEE 754)
+    private val lactateField = DeveloperField(
+        fieldDefinitionNumber = 0,
+        fitBaseTypeId = 136,
+        fieldName = "Lactate",
+        units = "mmol/L",
+    )
+
+    /**
+     * Reference to the active FIT emitter. Set when ride recording starts,
+     * cleared when it ends. Used for direct, synchronous writes — no flow
+     * or coroutine indirection that could cause duplicate records.
+     */
+    @Volatile
+    private var fitEmitter: Emitter<FitEffect>? = null
+
+    /** Debounce guard — prevents duplicate writes when emission straddles a 1Hz tick boundary */
+    @Volatile
+    private var lastFitWriteMs: Long = 0L
+    private val fitWriteDebounceMs = 1500L
+
+    /**
+     * Called by Karoo OS when ride recording starts.
+     * Stores the emitter reference so lactate values can be written
+     * directly to FIT records at the exact moment they are submitted.
+     */
+    override fun startFit(emitter: Emitter<FitEffect>) {
+        Timber.i("BravenDashboardExtension: startFit — Lactate developer field registered")
+        fitEmitter = emitter
+        lastFitWriteMs = 0L
+
+        emitter.setCancellable {
+            Timber.i("BravenDashboardExtension: startFit cancelled — ride ended")
+            fitEmitter = null
+        }
+    }
+
+    /**
+     * Called from the REST endpoint to submit a lactate reading.
+     * Writes directly to the FIT record (if recording) and
+     * updates the DataCollector state (broadcast via WebSocket).
+     */
+    fun submitLactate(value: Double) {
+        Timber.i("BravenDashboardExtension: Lactate submitted: $value mmol/L")
+        dataCollector.updateLactate(value)
+
+        val now = System.currentTimeMillis()
+        fitEmitter?.let { emitter ->
+            if (now - lastFitWriteMs > fitWriteDebounceMs) {
+                lastFitWriteMs = now
+                Timber.i("BravenDashboardExtension: Writing lactate $value mmol/L to FIT record")
+                emitter.onNext(
+                    WriteToRecordMesg(
+                        listOf(FieldValue(lactateField, value))
+                    )
+                )
+            } else {
+                Timber.w("BravenDashboardExtension: Skipping duplicate FIT write (debounce)")
+            }
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -59,10 +144,35 @@ class BravenDashboardExtension : KarooExtension("braven-dashboard", BuildConfig.
 
         karooSystem = KarooSystemService(applicationContext)
         dataCollector = DataCollector(karooSystem)
+        ftmsController = FtmsController(applicationContext)
         webServer = WebServer(
             port = SERVER_PORT,
             assetManager = assets,
             dataProvider = dataCollector,
+            onMarkLap = {
+                Timber.i("BravenDashboardExtension: Marking lap via hardware action")
+                karooSystem.dispatch(MarkLap)
+            },
+            onLactateUpdate = { value ->
+                submitLactate(value)
+            },
+            // Trainer control callbacks
+            onTrainerScan = {
+                requestBleAndScan()
+            },
+            onTrainerConnect = { address ->
+                ftmsController.connect(address)
+            },
+            onTrainerSetPower = { watts ->
+                ftmsController.setTargetPower(watts)
+            },
+            onTrainerDisconnect = {
+                ftmsController.disconnect()
+                releaseBle()
+            },
+            onTrainerStatus = {
+                ftmsController.statusJson()
+            },
         )
         networkDiscovery = NetworkDiscoveryService(
             context = applicationContext,
@@ -74,12 +184,68 @@ class BravenDashboardExtension : KarooExtension("braven-dashboard", BuildConfig.
             Timber.i("BravenDashboardExtension: KarooSystem connected=$connected")
             if (connected) {
                 startServices()
+                startTrainerStateMonitor()
+            }
+        }
+    }
+
+    /**
+     * Request BLE radio access from Karoo OS, then start scanning.
+     * The Karoo uses RequestBluetooth/ReleaseBluetooth to arbitrate
+     * the BLE radio between extensions and the OS.
+     */
+    private fun requestBleAndScan() {
+        if (!bleRequested) {
+            Timber.i("BravenDashboardExtension: Requesting BLE radio access")
+            karooSystem.dispatch(RequestBluetooth("braven-ftms"))
+            bleRequested = true
+        }
+        ftmsController.startScan()
+    }
+
+    /**
+     * Release BLE radio back to Karoo OS.
+     */
+    private fun releaseBle() {
+        if (bleRequested) {
+            Timber.i("BravenDashboardExtension: Releasing BLE radio")
+            karooSystem.dispatch(ReleaseBluetooth("braven-ftms"))
+            bleRequested = false
+        }
+    }
+
+    /**
+     * Monitor FtmsController state changes and push them into
+     * DataCollector so they're broadcast via WebSocket to dashboards.
+     */
+    private fun startTrainerStateMonitor() {
+        extensionScope.launch {
+            ftmsController.status.collect { trainerStatus ->
+                dataCollector.updateTrainerState(
+                    state = trainerStatus.state.name,
+                    deviceName = trainerStatus.deviceName,
+                    targetPower = trainerStatus.targetPower,
+                    error = trainerStatus.errorMessage,
+                )
             }
         }
     }
 
     override fun onDestroy() {
         Timber.i("BravenDashboardExtension: Destroying extension service")
+
+        try {
+            ftmsController.destroy()
+            releaseBle()
+        } catch (e: Exception) {
+            Timber.w(e, "Error stopping FTMS controller")
+        }
+
+        try {
+            extensionScope.cancel()
+        } catch (e: Exception) {
+            Timber.w(e, "Error cancelling extension scope")
+        }
 
         try {
             webServer.stopServer()

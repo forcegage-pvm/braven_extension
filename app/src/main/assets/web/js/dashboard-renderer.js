@@ -72,16 +72,38 @@ class DashboardRenderer {
       latitude: document.getElementById("latitude"),
       longitude: document.getElementById("longitude"),
       lastUpdate: document.getElementById("lastUpdate"),
+
+      // Lap List Table
+      lapListBody: document.getElementById("lapListBody"),
+      currentLapRow: document.getElementById("currentLapRow"),
+
+      // Lactate
+      lactateValue: document.getElementById("lactateValue"),
+      lactateTimestamp: document.getElementById("lactateTimestamp"),
+
+      // Trainer Control
+      trainerStateBadge: document.getElementById("trainerStateBadge"),
+      trainerScanSection: document.getElementById("trainerScanSection"),
+      trainerControlSection: document.getElementById("trainerControlSection"),
+      trainerDeviceName: document.getElementById("trainerDeviceName"),
+      trainerTargetDisplay: document.getElementById("trainerTargetDisplay"),
+      trainerError: document.getElementById("trainerError"),
+      trainerDeviceList: document.getElementById("trainerDeviceList"),
     };
 
-    // ─── Graph Data Buffers ───────────────────────────────
-    this._graphMaxPoints = 120; // ~2 minutes of data at 1Hz
+    // ─── Graph Data Buffers (Full Session - No Limit) ─────
     this._powerHistory = [];
     this._power3sHistory = [];
     this._hrHistory = [];
     this._cadenceHistory = [];
     this._vo2History = [];
 
+    // ─── Lap History Tracking ─────────────────────────────
+    this._lapHistory = []; // Array of completed laps
+    this._currentLapNumber = 0;
+    // ─── Lactate Tracking ───────────────────────────
+    this._currentLactate = null; // Latest lactate reading (mmol/L)
+    this._lactateTimestamp = null; // When last reading was taken
     // ─── Graph Colors ─────────────────────────────────────
     this._graphColors = {
       power: {
@@ -159,6 +181,8 @@ class DashboardRenderer {
     this._updateSpeed(data);
     this._updateLapData(data);
     this._updateSecondaryMetrics(data);
+    this._updateLactate(data);
+    this._updateTrainer(data);
     this._updateHeader(data);
     this._drawAllGraphs();
   }
@@ -172,12 +196,9 @@ class DashboardRenderer {
     if (this._els.power && data.power !== undefined) {
       this._els.power.textContent = data.power > 0 ? data.power : "--";
 
-      // Add to history
+      // Add to history (full session)
       if (data.power > 0) {
         this._powerHistory.push(data.power);
-        if (this._powerHistory.length > this._graphMaxPoints) {
-          this._powerHistory.shift();
-        }
       }
     }
 
@@ -186,12 +207,9 @@ class DashboardRenderer {
       this._els.power3sAvg.textContent =
         data.power3sAvg > 0 ? data.power3sAvg : "--";
 
-      // Add to 3s history
+      // Add to 3s history (full session)
       if (data.power3sAvg > 0) {
         this._power3sHistory.push(data.power3sAvg);
-        if (this._power3sHistory.length > this._graphMaxPoints) {
-          this._power3sHistory.shift();
-        }
       }
     }
 
@@ -228,9 +246,6 @@ class DashboardRenderer {
       if (data.vo2 !== undefined && data.vo2 > 0) {
         this._els.vo2.textContent = data.vo2.toFixed(1);
         this._vo2History.push(data.vo2);
-        if (this._vo2History.length > this._graphMaxPoints) {
-          this._vo2History.shift();
-        }
         if (this._els.vo2LiveBadge) {
           this._els.vo2LiveBadge.textContent = "Live";
           this._els.vo2LiveBadge.className =
@@ -266,9 +281,6 @@ class DashboardRenderer {
 
       if (data.heartRate > 0) {
         this._hrHistory.push(data.heartRate);
-        if (this._hrHistory.length > this._graphMaxPoints) {
-          this._hrHistory.shift();
-        }
       }
     }
 
@@ -293,9 +305,6 @@ class DashboardRenderer {
 
       if (data.cadence > 0) {
         this._cadenceHistory.push(data.cadence);
-        if (this._cadenceHistory.length > this._graphMaxPoints) {
-          this._cadenceHistory.shift();
-        }
 
         // Track for average
         this._cadenceSum += data.cadence;
@@ -343,6 +352,32 @@ class DashboardRenderer {
   // ═══════════════════════════════════════════════════════
 
   _updateLapData(data) {
+    // Detect lap change - when lap number increases, save the completed lap
+    if (
+      data.lapNumber !== undefined &&
+      data.lapNumber > this._currentLapNumber
+    ) {
+      // If we had a previous lap (not the first), save it to history
+      if (this._currentLapNumber > 0 && data.lastLapTime > 0) {
+        this._lapHistory.push({
+          number: this._currentLapNumber,
+          time: data.lastLapTime,
+          power: data.lastLapPower || 0,
+          speed: data.lastLapSpeed || 0,
+          heartRate: this._lastLapHR || 0,
+          cadence: this._lastLapCadence || 0,
+          lactate: this._currentLactate,
+        });
+        this._renderLapList();
+      }
+      this._currentLapNumber = data.lapNumber;
+    }
+
+    // Track current lap metrics for when lap completes
+    if (data.lapHeartRate !== undefined) this._lastLapHR = data.lapHeartRate;
+    if (data.lapCadence !== undefined) this._lastLapCadence = data.lapCadence;
+
+    // Update old lap display elements (for backwards compat)
     if (this._els.lapNumber && data.lapNumber !== undefined) {
       this._els.lapNumber.textContent =
         data.lapNumber > 0 ? data.lapNumber : "1";
@@ -352,18 +387,152 @@ class DashboardRenderer {
         data.lapTime > 0 ? this._formatTime(data.lapTime) : "00:00";
     }
 
-    // Last lap
-    if (this._els.lastLapPower && data.lastLapPower !== undefined) {
-      this._els.lastLapPower.textContent =
-        data.lastLapPower > 0 ? Math.round(data.lastLapPower) : "--";
+    // Render current lap in table
+    this._renderCurrentLapRow(data);
+  }
+
+  /**
+   * Render the current (in-progress) lap row at the top of the table
+   */
+  _renderCurrentLapRow(data) {
+    if (!this._els.currentLapRow) return;
+
+    const lapNum = data.lapNumber || 1;
+    const lapTime = data.lapTime || 0;
+    const lapPower = data.lapPower || 0;
+    const lapHR = data.lapHeartRate || 0;
+    const lapCadence = data.lapCadence || 0;
+
+    this._els.currentLapRow.innerHTML = `
+      <td class="px-3 py-2 text-cyan-400 font-semibold">${lapNum}</td>
+      <td class="px-3 py-2 font-mono text-cyan-300">${this._formatTime(lapTime)}</td>
+      <td class="px-3 py-2 font-semibold text-cyan-400">${lapPower > 0 ? lapPower : "--"}</td>
+      <td class="px-3 py-2 text-cyan-300">${lapHR > 0 ? lapHR : "--"}</td>
+      <td class="px-3 py-2 text-cyan-300">${lapCadence > 0 ? lapCadence : "--"}</td>
+      <td class="px-3 py-2 text-cyan-300 font-mono">${this._currentLactate !== null ? this._currentLactate.toFixed(1) : "--"}</td>
+    `;
+  }
+
+  /**
+   * Render the completed laps list (newest first)
+   */
+  _renderLapList() {
+    if (!this._els.lapListBody) return;
+
+    // Clear existing rows
+    this._els.lapListBody.innerHTML = "";
+
+    // Render laps in reverse order (newest first)
+    for (let i = this._lapHistory.length - 1; i >= 0; i--) {
+      const lap = this._lapHistory[i];
+      const row = document.createElement("tr");
+      row.className = "border-b border-neutral-800 hover:bg-neutral-800/50";
+      row.innerHTML = `
+        <td class="px-3 py-2 text-neutral-400">${lap.number}</td>
+        <td class="px-3 py-2 font-mono">${this._formatTime(lap.time)}</td>
+        <td class="px-3 py-2 font-semibold text-orange-400">${lap.power > 0 ? lap.power : "--"}</td>
+        <td class="px-3 py-2">${lap.heartRate > 0 ? lap.heartRate : "--"}</td>
+        <td class="px-3 py-2">${lap.cadence > 0 ? lap.cadence : "--"}</td>
+        <td class="px-3 py-2 font-mono text-rose-400">${lap.lactate !== null && lap.lactate !== undefined ? lap.lactate.toFixed(1) : "--"}</td>
+      `;
+      this._els.lapListBody.appendChild(row);
     }
-    if (this._els.lastLapTime && data.lastLapTime !== undefined) {
-      this._els.lastLapTime.textContent =
-        data.lastLapTime > 0 ? this._formatTime(data.lastLapTime) : "--";
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // LACTATE
+  // ═══════════════════════════════════════════════════════
+
+  _updateLactate(data) {
+    if (data.lactate !== undefined && data.lactate !== null) {
+      this._currentLactate = data.lactate;
+      this._lactateTimestamp = data.lactateTimestamp || Date.now();
+
+      if (this._els.lactateValue) {
+        this._els.lactateValue.textContent = data.lactate.toFixed(1);
+      }
+      if (this._els.lactateTimestamp && this._lactateTimestamp) {
+        const ago = this._formatTimeAgo(this._lactateTimestamp);
+        this._els.lactateTimestamp.textContent = `Last reading ${ago}`;
+      }
     }
-    if (this._els.lastLapSpeed && data.lastLapSpeed !== undefined) {
-      this._els.lastLapSpeed.textContent =
-        data.lastLapSpeed > 0 ? data.lastLapSpeed.toFixed(1) : "--";
+  }
+
+  _formatTimeAgo(timestamp) {
+    const diffMs = Date.now() - timestamp;
+    if (diffMs < 5000) return "just now";
+    if (diffMs < 60000) return `${Math.floor(diffMs / 1000)}s ago`;
+    if (diffMs < 3600000) return `${Math.floor(diffMs / 60000)}m ago`;
+    return `${Math.floor(diffMs / 3600000)}h ago`;
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // TRAINER CONTROL (KICKR via BLE FTMS)
+  // ═══════════════════════════════════════════════════════
+
+  _updateTrainer(data) {
+    const state = data.trainerState;
+    if (!state) return;
+
+    const badge = this._els.trainerStateBadge;
+    const scanSection = this._els.trainerScanSection;
+    const controlSection = this._els.trainerControlSection;
+    const errorEl = this._els.trainerError;
+
+    // State badge styling
+    if (badge) {
+      const stateConfig = {
+        DISCONNECTED: {
+          text: "Disconnected",
+          cls: "bg-neutral-700/50 text-neutral-500",
+        },
+        SCANNING: {
+          text: "Scanning",
+          cls: "bg-amber-500/20 text-amber-400 animate-pulse",
+        },
+        CONNECTING: {
+          text: "Connecting",
+          cls: "bg-amber-500/20 text-amber-400 animate-pulse",
+        },
+        CONNECTED: { text: "Connected", cls: "bg-blue-500/20 text-blue-400" },
+        CONTROLLING: {
+          text: "Controlling",
+          cls: "bg-green-500/20 text-green-400",
+        },
+        ERROR: { text: "Error", cls: "bg-red-500/20 text-red-400" },
+      };
+      const cfg = stateConfig[state] || stateConfig.DISCONNECTED;
+      badge.textContent = cfg.text;
+      badge.className = `ml-auto px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest rounded-full ${cfg.cls}`;
+    }
+
+    // Show/hide sections based on state
+    const isConnected = state === "CONNECTED" || state === "CONTROLLING";
+    if (scanSection) scanSection.classList.toggle("hidden", isConnected);
+    if (controlSection) controlSection.classList.toggle("hidden", !isConnected);
+
+    // Device name
+    if (this._els.trainerDeviceName && data.trainerDeviceName) {
+      this._els.trainerDeviceName.textContent = data.trainerDeviceName;
+    }
+
+    // Target power display
+    if (this._els.trainerTargetDisplay && data.trainerTargetPower != null) {
+      this._els.trainerTargetDisplay.textContent = data.trainerTargetPower;
+      // Update the global tracking variable for +/- adjustments
+      if (typeof _currentTrainerTarget !== "undefined") {
+        window._currentTrainerTarget = data.trainerTargetPower;
+      }
+    }
+
+    // Error message
+    if (errorEl) {
+      if (data.trainerError) {
+        errorEl.textContent = data.trainerError;
+        errorEl.classList.remove("hidden");
+      } else {
+        errorEl.classList.add("hidden");
+      }
     }
   }
 
@@ -442,11 +611,13 @@ class DashboardRenderer {
     }
     // Time Strip - Lap Time (prominent)
     if (this._els.lapTimeBig && data.lapTime !== undefined) {
-      this._els.lapTimeBig.textContent = data.lapTime > 0 ? this._formatTime(data.lapTime) : "00:00";
+      this._els.lapTimeBig.textContent =
+        data.lapTime > 0 ? this._formatTime(data.lapTime) : "00:00";
     }
     // Time Strip - Lap Number
     if (this._els.lapNumberBig && data.lapNumber !== undefined) {
-      this._els.lapNumberBig.textContent = data.lapNumber > 0 ? data.lapNumber : "1";
+      this._els.lapNumberBig.textContent =
+        data.lapNumber > 0 ? data.lapNumber : "1";
     }
 
     // Header bar elapsed (smaller, for reference)

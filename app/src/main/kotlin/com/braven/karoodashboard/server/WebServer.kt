@@ -23,6 +23,14 @@ class WebServer(
     private val port: Int,
     private val assetManager: AssetManager,
     private val dataProvider: DataCollector,
+    private val onMarkLap: (() -> Unit)? = null,
+    private val onLactateUpdate: ((Double) -> Unit)? = null,
+    // Trainer control callbacks
+    private val onTrainerScan: (() -> Unit)? = null,
+    private val onTrainerConnect: ((String) -> Unit)? = null,
+    private val onTrainerSetPower: ((Int) -> Unit)? = null,
+    private val onTrainerDisconnect: (() -> Unit)? = null,
+    private val onTrainerStatus: (() -> String)? = null,
 ) : NanoWSD(port) {
 
     private val connectedClients = CopyOnWriteArrayList<BravenWebSocket>()
@@ -36,6 +44,19 @@ class WebServer(
     override fun serve(session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response {
         val uri = session.uri ?: "/"
         Timber.d("WebServer: HTTP ${session.method} $uri")
+
+        // Handle CORS preflight requests
+        if (session.method == Method.OPTIONS) {
+            return NanoHTTPD.newFixedLengthResponse(
+                NanoHTTPD.Response.Status.OK,
+                NanoHTTPD.MIME_PLAINTEXT,
+                "",
+            ).also {
+                it.addHeader("Access-Control-Allow-Origin", "*")
+                it.addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                it.addHeader("Access-Control-Allow-Headers", "Content-Type")
+            }
+        }
 
         // Route to appropriate handler
         val assetPath = when {
@@ -64,6 +85,137 @@ class WebServer(
                     discoveryJson,
                 ).also {
                     it.addHeader("Access-Control-Allow-Origin", "*")
+                }
+            }
+            uri == "/api/lap" && session.method == Method.POST -> {
+                // Trigger a lap mark on the Karoo
+                return if (onMarkLap != null) {
+                    Timber.i("WebServer: Lap mark requested via API")
+                    onMarkLap.invoke()
+                    NanoHTTPD.newFixedLengthResponse(
+                        NanoHTTPD.Response.Status.OK,
+                        "application/json",
+                        """{"success":true,"message":"Lap marked"}""",
+                    ).also {
+                        it.addHeader("Access-Control-Allow-Origin", "*")
+                    }
+                } else {
+                    NanoHTTPD.newFixedLengthResponse(
+                        NanoHTTPD.Response.Status.SERVICE_UNAVAILABLE,
+                        "application/json",
+                        """{"success":false,"message":"Lap marking not available"}""",
+                    ).also {
+                        it.addHeader("Access-Control-Allow-Origin", "*")
+                    }
+                }
+            }
+            uri == "/api/lactate" && session.method == Method.POST -> {
+                // Submit a lactate measurement from the lab
+                return try {
+                    // NanoHTTPD requires parseBody to read POST content
+                    val bodyFiles = HashMap<String, String>()
+                    session.parseBody(bodyFiles)
+                    val body = bodyFiles["postData"] ?: ""
+
+                    // Simple JSON parsing for {"value": 1.2}
+                    val valueMatch = Regex(""""value"\s*:\s*([\d.]+)""").find(body)
+                    val lactateValue = valueMatch?.groupValues?.get(1)?.toDoubleOrNull()
+
+                    if (lactateValue != null && lactateValue in 0.0..50.0) {
+                        Timber.i("WebServer: Lactate submitted: $lactateValue mmol/L")
+                        onLactateUpdate?.invoke(lactateValue)
+                        NanoHTTPD.newFixedLengthResponse(
+                            NanoHTTPD.Response.Status.OK,
+                            "application/json",
+                            """{"success":true,"value":$lactateValue,"message":"Lactate recorded"}""",
+                        ).also {
+                            it.addHeader("Access-Control-Allow-Origin", "*")
+                        }
+                    } else {
+                        NanoHTTPD.newFixedLengthResponse(
+                            NanoHTTPD.Response.Status.BAD_REQUEST,
+                            "application/json",
+                            """{"success":false,"message":"Invalid lactate value. Send {\"value\": <number>} with 0-50 range."}""",
+                        ).also {
+                            it.addHeader("Access-Control-Allow-Origin", "*")
+                        }
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e, "WebServer: Error parsing lactate request")
+                    NanoHTTPD.newFixedLengthResponse(
+                        NanoHTTPD.Response.Status.INTERNAL_ERROR,
+                        "application/json",
+                        """{"success":false,"message":"${e.message}"}""",
+                    ).also {
+                        it.addHeader("Access-Control-Allow-Origin", "*")
+                    }
+                }
+            }
+
+            // ─── Trainer Control Endpoints ───────────────────
+            uri == "/api/trainer/scan" && session.method == Method.POST -> {
+                return if (onTrainerScan != null) {
+                    Timber.i("WebServer: Trainer scan requested")
+                    onTrainerScan.invoke()
+                    jsonResponse("""{"success":true,"message":"Scanning for trainers"}""")
+                } else {
+                    jsonResponse("""{"success":false,"message":"Trainer control not available"}""", NanoHTTPD.Response.Status.SERVICE_UNAVAILABLE)
+                }
+            }
+            uri == "/api/trainer/connect" && session.method == Method.POST -> {
+                return try {
+                    val bodyFiles = HashMap<String, String>()
+                    session.parseBody(bodyFiles)
+                    val body = bodyFiles["postData"] ?: ""
+                    val addressMatch = Regex(""""address"\s*:\s*"([^"]+)"""").find(body)
+                    val address = addressMatch?.groupValues?.get(1)
+
+                    if (address != null && onTrainerConnect != null) {
+                        Timber.i("WebServer: Trainer connect requested: $address")
+                        onTrainerConnect.invoke(address)
+                        jsonResponse("""{"success":true,"message":"Connecting to trainer"}""")
+                    } else {
+                        jsonResponse("""{"success":false,"message":"Missing address or trainer control not available"}""", NanoHTTPD.Response.Status.BAD_REQUEST)
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e, "WebServer: Error parsing trainer connect request")
+                    jsonResponse("""{"success":false,"message":"${e.message}"}""", NanoHTTPD.Response.Status.INTERNAL_ERROR)
+                }
+            }
+            uri == "/api/trainer/power" && session.method == Method.POST -> {
+                return try {
+                    val bodyFiles = HashMap<String, String>()
+                    session.parseBody(bodyFiles)
+                    val body = bodyFiles["postData"] ?: ""
+                    val wattsMatch = Regex(""""watts"\s*:\s*(\d+)""").find(body)
+                    val watts = wattsMatch?.groupValues?.get(1)?.toIntOrNull()
+
+                    if (watts != null && watts in 0..2000 && onTrainerSetPower != null) {
+                        Timber.i("WebServer: Trainer target power: $watts W")
+                        onTrainerSetPower.invoke(watts)
+                        jsonResponse("""{"success":true,"watts":$watts,"message":"Target power set"}""")
+                    } else {
+                        jsonResponse("""{"success":false,"message":"Invalid watts (0-2000) or trainer not available"}""", NanoHTTPD.Response.Status.BAD_REQUEST)
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e, "WebServer: Error parsing trainer power request")
+                    jsonResponse("""{"success":false,"message":"${e.message}"}""", NanoHTTPD.Response.Status.INTERNAL_ERROR)
+                }
+            }
+            uri == "/api/trainer/disconnect" && session.method == Method.POST -> {
+                return if (onTrainerDisconnect != null) {
+                    Timber.i("WebServer: Trainer disconnect requested")
+                    onTrainerDisconnect.invoke()
+                    jsonResponse("""{"success":true,"message":"Trainer disconnected"}""")
+                } else {
+                    jsonResponse("""{"success":false,"message":"Trainer control not available"}""", NanoHTTPD.Response.Status.SERVICE_UNAVAILABLE)
+                }
+            }
+            uri == "/api/trainer/status" -> {
+                return if (onTrainerStatus != null) {
+                    jsonResponse(onTrainerStatus.invoke())
+                } else {
+                    jsonResponse("""{"state":"UNAVAILABLE"}""")
                 }
             }
             uri == "/discovery" || uri == "/discovery.html" -> "web/discovery.html"
@@ -139,6 +291,15 @@ class WebServer(
         path.endsWith(".woff") -> "font/woff"
         path.endsWith(".woff2") -> "font/woff2"
         else -> "application/octet-stream"
+    }
+
+    private fun jsonResponse(
+        json: String,
+        status: NanoHTTPD.Response.Status = NanoHTTPD.Response.Status.OK,
+    ): NanoHTTPD.Response {
+        return NanoHTTPD.newFixedLengthResponse(status, "application/json", json).also {
+            it.addHeader("Access-Control-Allow-Origin", "*")
+        }
     }
 
     /**
