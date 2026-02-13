@@ -50,13 +50,26 @@ class BravenDashboardExtension : KarooExtension("braven-dashboard", BuildConfig.
         const val SERVER_PORT = 8080
         private const val NOTIFICATION_ID = 1
         private const val CHANNEL_ID = "braven_dashboard_channel"
+
+        /** Singleton reference so MainActivity can access the running controller */
+        @Volatile
+        var instance: BravenDashboardExtension? = null
+            private set
+    }
+
+    /** Custom data types visible on Karoo ride pages */
+    override val types by lazy {
+        listOf(
+            TargetWattsDataType(extension),
+        )
     }
 
     private lateinit var karooSystem: KarooSystemService
     private lateinit var dataCollector: DataCollector
     private lateinit var webServer: WebServer
     private lateinit var networkDiscovery: NetworkDiscoveryService
-    private lateinit var ftmsController: FtmsController
+    lateinit var ftmsController: FtmsController
+        private set
 
     /** Coroutine scope for trainer state monitoring */
     private val extensionScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -137,6 +150,7 @@ class BravenDashboardExtension : KarooExtension("braven-dashboard", BuildConfig.
         }
 
         Timber.i("BravenDashboardExtension: Creating extension service")
+        instance = this
 
         // Start as foreground service immediately to prevent Android from killing us
         createNotificationChannel()
@@ -194,7 +208,7 @@ class BravenDashboardExtension : KarooExtension("braven-dashboard", BuildConfig.
      * The Karoo uses RequestBluetooth/ReleaseBluetooth to arbitrate
      * the BLE radio between extensions and the OS.
      */
-    private fun requestBleAndScan() {
+    fun requestBleAndScan() {
         if (!bleRequested) {
             Timber.i("BravenDashboardExtension: Requesting BLE radio access")
             karooSystem.dispatch(RequestBluetooth("braven-ftms"))
@@ -206,7 +220,7 @@ class BravenDashboardExtension : KarooExtension("braven-dashboard", BuildConfig.
     /**
      * Release BLE radio back to Karoo OS.
      */
-    private fun releaseBle() {
+    fun releaseBle() {
         if (bleRequested) {
             Timber.i("BravenDashboardExtension: Releasing BLE radio")
             karooSystem.dispatch(ReleaseBluetooth("braven-ftms"))
@@ -233,6 +247,7 @@ class BravenDashboardExtension : KarooExtension("braven-dashboard", BuildConfig.
 
     override fun onDestroy() {
         Timber.i("BravenDashboardExtension: Destroying extension service")
+        instance = null
 
         try {
             ftmsController.destroy()

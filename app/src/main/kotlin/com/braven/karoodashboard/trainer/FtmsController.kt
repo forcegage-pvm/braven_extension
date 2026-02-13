@@ -140,7 +140,7 @@ class FtmsController(private val context: Context) {
         stopScan()
 
         scannedDevices.clear()
-        updateStatus(TrainerState.SCANNING)
+        updateStatus(TrainerState.SCANNING, errorMessage = null)
         Timber.i("FtmsController: Starting BLE scan for FTMS devices")
 
         bleScanner = adapter.bluetoothLeScanner
@@ -228,7 +228,7 @@ class FtmsController(private val context: Context) {
 
         val deviceName = device.name ?: "Trainer"
         Timber.i("FtmsController: Connecting to $deviceName [$address]")
-        updateStatus(TrainerState.CONNECTING, deviceName = deviceName)
+        updateStatus(TrainerState.CONNECTING, deviceName = deviceName, errorMessage = null)
 
         bluetoothGatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
     }

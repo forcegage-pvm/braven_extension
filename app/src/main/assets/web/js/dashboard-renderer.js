@@ -451,6 +451,7 @@ class DashboardRenderer {
       if (this._els.lactateValue) {
         this._els.lactateValue.textContent = data.lactate.toFixed(1);
       }
+      // Do NOT sync stepper digits from WebSocket — let user control them freely
       if (this._els.lactateTimestamp && this._lactateTimestamp) {
         const ago = this._formatTimeAgo(this._lactateTimestamp);
         this._els.lactateTimestamp.textContent = `Last reading ${ago}`;

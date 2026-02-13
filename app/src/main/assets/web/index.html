@@ -658,44 +658,97 @@
 
       <!-- Lactate Entry -->
       <div
-        class="row-start-3 col-start-3 col-span-2 relative flex flex-col rounded-2xl bg-neutral-900/30 border border-white/5 p-4 backdrop-blur-sm"
+        class="row-start-3 col-start-3 col-span-2 relative flex rounded-2xl bg-neutral-900/30 border border-white/5 p-4 backdrop-blur-sm gap-4"
       >
-        <div class="flex items-center gap-2 mb-2">
-          <div class="p-1.5 rounded-lg bg-rose-500/10 text-rose-400">
-            <i data-lucide="droplet" class="w-4 h-4"></i>
+        <!-- Left column: header + big value -->
+        <div class="flex flex-col justify-between flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1">
+            <div class="p-1.5 rounded-lg bg-rose-500/10 text-rose-400">
+              <i data-lucide="droplet" class="w-4 h-4"></i>
+            </div>
+            <span
+              class="text-xs font-medium tracking-wider text-rose-400 uppercase"
+              >LACTATE</span
+            >
           </div>
-          <span
-            class="text-xs font-medium tracking-wider text-neutral-500 uppercase"
-            >Lactate</span
-          >
+          <div class="flex items-baseline gap-1">
+            <span
+              id="lactateValue"
+              class="text-6xl font-bold tracking-tighter text-white tabular-nums"
+              >--</span
+            >
+            <span class="text-sm text-neutral-500">mmol/L</span>
+          </div>
+          <div
+            id="lactateTimestamp"
+            class="text-xs text-neutral-500 mt-1"
+          ></div>
         </div>
-        <div class="flex items-baseline gap-1 mb-3">
-          <span
-            id="lactateValue"
-            class="text-4xl font-bold tracking-tighter text-white tabular-nums"
-            >--</span
+        <!-- Right column: stepper controls -->
+        <div class="flex items-center justify-center gap-2 shrink-0">
+          <!-- Whole digit -->
+          <div class="flex flex-col items-center gap-1.5">
+            <button
+              onclick="lactateStep('whole', 1)"
+              class="w-14 h-10 flex items-center justify-center rounded-lg bg-neutral-800/80 border border-neutral-700 text-neutral-400 hover:bg-neutral-700/80 hover:text-white transition-colors"
+            >
+              <i data-lucide="chevron-up" class="w-5 h-5"></i>
+            </button>
+            <div
+              id="lactateWhole"
+              class="w-14 h-14 flex items-center justify-center rounded-lg bg-neutral-800/80 border border-neutral-700 text-white text-2xl font-bold font-mono"
+            >
+              0
+            </div>
+            <button
+              onclick="lactateStep('whole', -1)"
+              class="w-14 h-10 flex items-center justify-center rounded-lg bg-neutral-800/80 border border-neutral-700 text-neutral-400 hover:bg-neutral-700/80 hover:text-white transition-colors"
+            >
+              <i data-lucide="chevron-down" class="w-5 h-5"></i>
+            </button>
+            <span
+              class="text-[10px] font-medium tracking-wider text-neutral-500 uppercase"
+              >WHOLE</span
+            >
+          </div>
+          <!-- Dot -->
+          <span class="text-2xl font-bold text-neutral-500 self-center -mt-6"
+            >.</span
           >
-          <span class="text-sm text-neutral-500">mmol/L</span>
-        </div>
-        <div class="flex gap-2">
-          <input
-            id="lactateInput"
-            type="number"
-            step="0.1"
-            min="0"
-            max="50"
-            placeholder="e.g. 1.2"
-            class="flex-1 px-3 py-1.5 rounded-lg bg-neutral-800/80 border border-neutral-700 text-white text-sm font-mono placeholder:text-neutral-600 focus:outline-none focus:border-rose-500/50 focus:ring-1 focus:ring-rose-500/20"
-          />
+          <!-- Decimal digit -->
+          <div class="flex flex-col items-center gap-1.5">
+            <button
+              onclick="lactateStep('dec', 1)"
+              class="w-14 h-10 flex items-center justify-center rounded-lg bg-neutral-800/80 border border-neutral-700 text-neutral-400 hover:bg-neutral-700/80 hover:text-white transition-colors"
+            >
+              <i data-lucide="chevron-up" class="w-5 h-5"></i>
+            </button>
+            <div
+              id="lactateDec"
+              class="w-14 h-14 flex items-center justify-center rounded-lg bg-neutral-800/80 border border-neutral-700 text-white text-2xl font-bold font-mono"
+            >
+              0
+            </div>
+            <button
+              onclick="lactateStep('dec', -1)"
+              class="w-14 h-10 flex items-center justify-center rounded-lg bg-neutral-800/80 border border-neutral-700 text-neutral-400 hover:bg-neutral-700/80 hover:text-white transition-colors"
+            >
+              <i data-lucide="chevron-down" class="w-5 h-5"></i>
+            </button>
+            <span
+              class="text-[10px] font-medium tracking-wider text-neutral-500 uppercase"
+              >DEC</span
+            >
+          </div>
+          <!-- Submit -->
           <button
             id="lactateSubmitBtn"
             onclick="submitLactate()"
-            class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30 hover:border-rose-500/50 transition-colors"
+            class="w-16 h-14 flex items-center justify-center rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30 hover:border-rose-500/50 transition-colors self-center -mt-6 ml-1"
           >
-            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+            <i data-lucide="check" class="w-7 h-7"></i>
           </button>
         </div>
-        <div id="lactateTimestamp" class="text-xs text-neutral-500 mt-2"></div>
       </div>
 
       <!-- Hidden elements to keep JS refs intact -->
@@ -810,24 +863,35 @@
       }
 
       /**
+       * Lactate stepper state
+       */
+      let _lactateWhole = 0;
+      let _lactateDec = 0;
+
+      function lactateStep(part, delta) {
+        if (part === "whole") {
+          _lactateWhole = Math.max(0, Math.min(50, _lactateWhole + delta));
+          document.getElementById("lactateWhole").textContent = _lactateWhole;
+        } else {
+          _lactateDec = (((_lactateDec + delta) % 10) + 10) % 10;
+          document.getElementById("lactateDec").textContent = _lactateDec;
+        }
+      }
+
+      /**
        * Submit a lactate measurement via the API
        */
       async function submitLactate() {
-        const input = document.getElementById("lactateInput");
         const btn = document.getElementById("lactateSubmitBtn");
-        const value = parseFloat(input.value);
+        const value = _lactateWhole + _lactateDec * 0.1;
 
-        if (isNaN(value) || value < 0 || value > 50) {
-          input.classList.add("border-red-500");
-          setTimeout(() => input.classList.remove("border-red-500"), 1500);
-          return;
-        }
+        if (value < 0 || value > 50) return;
 
         const originalHTML = btn.innerHTML;
         try {
           btn.disabled = true;
           btn.innerHTML =
-            '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i>';
+            '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>';
           lucide.createIcons({ nodes: btn.querySelectorAll("[data-lucide]") });
 
           const response = await fetch("/api/lactate", {
@@ -838,7 +902,6 @@
           const result = await response.json();
 
           if (result.success) {
-            btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5"></i>';
             btn.classList.remove(
               "text-rose-400",
               "bg-rose-500/20",
@@ -849,13 +912,18 @@
               "bg-green-500/20",
               "border-green-500/30",
             );
-            input.value = "";
+            // Auto-trigger a new lap after successful lactate submission
+            try {
+              await fetch("/api/lap", { method: "POST" });
+            } catch (lapErr) {
+              console.warn("Auto-lap after lactate failed:", lapErr);
+            }
           } else {
             throw new Error(result.message || "Failed");
           }
         } catch (err) {
           console.error("Failed to submit lactate:", err);
-          btn.innerHTML = '<i data-lucide="x" class="w-3.5 h-3.5"></i>';
+          btn.innerHTML = '<i data-lucide="x" class="w-5 h-5"></i>';
           btn.classList.remove(
             "text-rose-400",
             "bg-rose-500/20",
@@ -866,9 +934,8 @@
             "bg-red-500/20",
             "border-red-500/30",
           );
+          lucide.createIcons({ nodes: btn.querySelectorAll("[data-lucide]") });
         }
-
-        lucide.createIcons({ nodes: btn.querySelectorAll("[data-lucide]") });
 
         setTimeout(() => {
           btn.disabled = false;
@@ -889,13 +956,6 @@
           lucide.createIcons({ nodes: btn.querySelectorAll("[data-lucide]") });
         }, 2000);
       }
-
-      // Allow Enter key to submit lactate
-      document
-        .getElementById("lactateInput")
-        .addEventListener("keydown", (e) => {
-          if (e.key === "Enter") submitLactate();
-        });
 
       // Allow Enter key to set trainer power
       document

@@ -4,4 +4,12 @@
     displayName="@string/extension_name"
     icon="@drawable/ic_braven"
     scansDevices="false"
-    fitFile="true" />
+    fitFile="true">
+
+    <DataType
+        typeId="target-watts"
+        displayName="@string/target_watts_name"
+        description="@string/target_watts_description"
+        icon="@drawable/ic_target_watts" />
+
+</ExtensionInfo>
