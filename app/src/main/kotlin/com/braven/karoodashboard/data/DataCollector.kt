@@ -189,15 +189,16 @@ class DataCollector(private val karooSystem: KarooSystemService) {
      * Update the lactate value from a manual lab entry.
      * Value persists in the session state until overwritten.
      */
-    fun updateLactate(value: Double) {
+    fun updateLactate(value: Double, offsetMs: Long = 0L) {
+        val backdatedTimestamp = System.currentTimeMillis() - offsetMs
         _currentState.update {
             it.copy(
                 lactate = value,
-                lactateTimestamp = System.currentTimeMillis(),
+                lactateTimestamp = backdatedTimestamp,
                 timestamp = now(),
             )
         }
-        Timber.i("DataCollector: Lactate updated to $value mmol/L")
+        Timber.i("DataCollector: Lactate updated to $value mmol/L (backdated ${offsetMs}ms)")
     }
 
     /**

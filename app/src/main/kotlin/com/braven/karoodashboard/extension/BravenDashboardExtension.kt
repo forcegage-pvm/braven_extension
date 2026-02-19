@@ -78,13 +78,21 @@ class BravenDashboardExtension : KarooExtension("braven-dashboard", BuildConfig.
     @Volatile
     private var bleRequested = false
 
-    // ─── FIT Developer Field: Lactate ───────────────────────
+    // ─── FIT Developer Fields: Lactate ───────────────────────
     // FIT Base Type 136 = Float32 (IEEE 754)
     private val lactateField = DeveloperField(
         fieldDefinitionNumber = 0,
         fitBaseTypeId = 136,
         fieldName = "Lactate",
         units = "mmol/L",
+    )
+
+    // FIT Base Type 132 = Uint16 — measurement delay in seconds
+    private val lactateOffsetField = DeveloperField(
+        fieldDefinitionNumber = 1,
+        fitBaseTypeId = 132,
+        fieldName = "LactateOffset",
+        units = "s",
     )
 
     /**
@@ -121,18 +129,21 @@ class BravenDashboardExtension : KarooExtension("braven-dashboard", BuildConfig.
      * Writes directly to the FIT record (if recording) and
      * updates the DataCollector state (broadcast via WebSocket).
      */
-    fun submitLactate(value: Double) {
-        Timber.i("BravenDashboardExtension: Lactate submitted: $value mmol/L")
-        dataCollector.updateLactate(value)
+    fun submitLactate(value: Double, offsetSeconds: Int = 0) {
+        Timber.i("BravenDashboardExtension: Lactate submitted: $value mmol/L (offset: ${offsetSeconds}s)")
+        dataCollector.updateLactate(value, offsetSeconds * 1000L)
 
         val now = System.currentTimeMillis()
         fitEmitter?.let { emitter ->
             if (now - lastFitWriteMs > fitWriteDebounceMs) {
                 lastFitWriteMs = now
-                Timber.i("BravenDashboardExtension: Writing lactate $value mmol/L to FIT record")
+                Timber.i("BravenDashboardExtension: Writing lactate $value mmol/L (offset: ${offsetSeconds}s) to FIT record")
                 emitter.onNext(
                     WriteToRecordMesg(
-                        listOf(FieldValue(lactateField, value))
+                        listOf(
+                            FieldValue(lactateField, value),
+                            FieldValue(lactateOffsetField, offsetSeconds.toDouble())
+                        )
                     )
                 )
             } else {
@@ -167,8 +178,8 @@ class BravenDashboardExtension : KarooExtension("braven-dashboard", BuildConfig.
                 Timber.i("BravenDashboardExtension: Marking lap via hardware action")
                 karooSystem.dispatch(MarkLap)
             },
-            onLactateUpdate = { value ->
-                submitLactate(value)
+            onLactateUpdate = { value, offsetSeconds ->
+                submitLactate(value, offsetSeconds)
             },
             // Trainer control callbacks
             onTrainerScan = {

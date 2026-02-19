@@ -7,8 +7,12 @@ import fi.iki.elonen.NanoWSD
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.CopyOnWriteArrayList
@@ -24,7 +28,7 @@ class WebServer(
     private val assetManager: AssetManager,
     private val dataProvider: DataCollector,
     private val onMarkLap: (() -> Unit)? = null,
-    private val onLactateUpdate: ((Double) -> Unit)? = null,
+    private val onLactateUpdate: ((Double, Int) -> Unit)? = null,
     // Trainer control callbacks
     private val onTrainerScan: (() -> Unit)? = null,
     private val onTrainerConnect: ((String) -> Unit)? = null,
@@ -117,13 +121,15 @@ class WebServer(
                     session.parseBody(bodyFiles)
                     val body = bodyFiles["postData"] ?: ""
 
-                    // Simple JSON parsing for {"value": 1.2}
+                    // Simple JSON parsing for {"value": 1.2, "offsetSeconds": 30}
                     val valueMatch = Regex(""""value"\s*:\s*([\d.]+)""").find(body)
                     val lactateValue = valueMatch?.groupValues?.get(1)?.toDoubleOrNull()
+                    val offsetMatch = Regex(""""offsetSeconds"\s*:\s*(\d+)""").find(body)
+                    val offsetSeconds = offsetMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
 
                     if (lactateValue != null && lactateValue in 0.0..50.0) {
-                        Timber.i("WebServer: Lactate submitted: $lactateValue mmol/L")
-                        onLactateUpdate?.invoke(lactateValue)
+                        Timber.i("WebServer: Lactate submitted: $lactateValue mmol/L (offset: ${offsetSeconds}s)")
+                        onLactateUpdate?.invoke(lactateValue, offsetSeconds)
                         NanoHTTPD.newFixedLengthResponse(
                             NanoHTTPD.Response.Status.OK,
                             "application/json",
@@ -247,24 +253,66 @@ class WebServer(
 
     /**
      * Start broadcasting session state changes to all connected WebSocket clients.
+     * Each client gets its own coroutine with a timeout to prevent one slow/stuck
+     * client from blocking delivery to others.
      */
     fun startBroadcasting() {
         scope.launch {
             Timber.i("WebServer: Broadcasting started")
             dataProvider.currentState.collect { state ->
                 val json = state.toJson()
+                val clientCount = connectedClients.size
+                if (clientCount == 0) return@collect
+
                 val deadClients = mutableListOf<BravenWebSocket>()
 
-                connectedClients.forEach { client ->
-                    try {
-                        client.send(json)
-                    } catch (e: Exception) {
-                        Timber.w("WebServer: Failed to send to client, removing")
-                        deadClients.add(client)
+                // Fan-out: send to each client in parallel with a 2s timeout
+                connectedClients.map { client ->
+                    async {
+                        try {
+                            val sent = withTimeoutOrNull(2000L) {
+                                client.send(json)
+                                true
+                            }
+                            if (sent == null) {
+                                Timber.w("WebServer: Send timed out for client, removing")
+                                deadClients.add(client)
+                            }
+                        } catch (e: Exception) {
+                            Timber.w("WebServer: Failed to send to client: ${e.message}")
+                            deadClients.add(client)
+                        }
+                    }
+                }.awaitAll()
+
+                if (deadClients.isNotEmpty()) {
+                    deadClients.forEach { connectedClients.remove(it) }
+                    Timber.i("WebServer: Pruned ${deadClients.size} dead client(s), ${connectedClients.size} remaining")
+                }
+            }
+        }
+
+        // Periodic ping to detect stale connections early
+        scope.launch {
+            while (true) {
+                delay(15_000L)
+                val clientCount = connectedClients.size
+                if (clientCount > 0) {
+                    Timber.d("WebServer: Ping check - $clientCount connected client(s)")
+                    val deadClients = mutableListOf<BravenWebSocket>()
+                    connectedClients.forEach { client ->
+                        try {
+                            client.ping(ByteArray(0))
+                        } catch (e: Exception) {
+                            Timber.w("WebServer: Ping failed for client: ${e.message}")
+                            deadClients.add(client)
+                        }
+                    }
+                    if (deadClients.isNotEmpty()) {
+                        deadClients.forEach { connectedClients.remove(it) }
+                        Timber.i("WebServer: Ping pruned ${deadClients.size} stale client(s), ${connectedClients.size} remaining")
                     }
                 }
-
-                deadClients.forEach { connectedClients.remove(it) }
             }
         }
     }
@@ -308,8 +356,16 @@ class WebServer(
     inner class BravenWebSocket(handshake: NanoHTTPD.IHTTPSession) : WebSocket(handshake) {
 
         override fun onOpen() {
-            Timber.i("WebServer: Client connected (${connectedClients.size + 1} total)")
             connectedClients.add(this)
+            Timber.i("WebServer: Client connected - ${connectedClients.size} total active connection(s)")
+            // Send immediate state snapshot so client doesn't have to wait for next 1Hz tick
+            try {
+                val snapshot = dataProvider.currentState.value.toJson()
+                send(snapshot)
+                Timber.d("WebServer: Sent initial snapshot to new client")
+            } catch (e: Exception) {
+                Timber.w("WebServer: Failed to send initial snapshot: ${e.message}")
+            }
         }
 
         override fun onClose(
@@ -317,8 +373,8 @@ class WebServer(
             reason: String?,
             initiatedByRemote: Boolean,
         ) {
-            Timber.i("WebServer: Client disconnected: $reason")
             connectedClients.remove(this)
+            Timber.i("WebServer: Client disconnected (reason=$reason, remote=$initiatedByRemote) - ${connectedClients.size} remaining")
         }
 
         override fun onMessage(message: WebSocketFrame?) {

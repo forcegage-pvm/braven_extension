@@ -13,6 +13,9 @@ class DashboardRenderer {
       pingDot: document.getElementById("pingDot"),
       solidDot: document.getElementById("solidDot"),
       connectionText: document.getElementById("connectionText"),
+      rideStateBadge: document.getElementById("rideStateBadge"),
+      rideStateIcon: document.getElementById("rideStateIcon"),
+      rideStateText: document.getElementById("rideStateText"),
       elapsedTime: document.getElementById("elapsedTime"),
       batteryPercent: document.getElementById("batteryPercent"),
       batteryIcon: document.getElementById("batteryIcon"),
@@ -120,6 +123,8 @@ class DashboardRenderer {
     this._prevCoreTemp = null;
     this._cadenceSum = 0;
     this._cadenceCount = 0;
+    this._lastElapsedTime = 0; // Track ride state transitions
+    this._rideState = "idle"; // 'idle' | 'recording' | 'paused'
 
     // Zone names for power
     this._zoneNames = ["", "Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7"];
@@ -606,6 +611,19 @@ class DashboardRenderer {
   // ═══════════════════════════════════════════════════════
 
   _updateHeader(data) {
+    // Ride state detection based on elapsedTime
+    if (data.elapsedTime !== undefined) {
+      const elapsed = data.elapsedTime;
+      if (elapsed === 0) {
+        this._setRideState("idle");
+      } else if (elapsed > this._lastElapsedTime) {
+        this._setRideState("recording");
+      } else if (elapsed === this._lastElapsedTime && elapsed > 0) {
+        this._setRideState("paused");
+      }
+      this._lastElapsedTime = elapsed;
+    }
+
     // Time Strip - Session Time (prominent)
     if (this._els.sessionTime && data.elapsedTime !== undefined) {
       this._els.sessionTime.textContent = this._formatTime(data.elapsedTime);
@@ -791,6 +809,60 @@ class DashboardRenderer {
         : "text-xs font-medium text-red-500 tracking-wide uppercase";
       text.textContent = connected ? "Live" : "Disconnected";
     }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // RIDE STATE
+  // ═══════════════════════════════════════════════════════
+
+  _setRideState(state) {
+    if (state === this._rideState) return;
+    this._rideState = state;
+    console.log(`[Dashboard] Ride state → ${state}`);
+
+    const badge = this._els.rideStateBadge;
+    const icon = this._els.rideStateIcon;
+    const text = this._els.rideStateText;
+    if (!badge || !text) return;
+
+    const configs = {
+      idle: {
+        badgeCls:
+          "flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-neutral-500/10 border border-neutral-500/20",
+        iconCls: "text-neutral-500",
+        iconName: "circle-pause",
+        textCls:
+          "text-[10px] font-medium text-neutral-500 tracking-wide uppercase",
+        label: "Idle",
+      },
+      recording: {
+        badgeCls:
+          "flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/10 border border-red-500/20",
+        iconCls: "text-red-500",
+        iconName: "circle-dot",
+        textCls: "text-[10px] font-medium text-red-500 tracking-wide uppercase",
+        label: "Recording",
+      },
+      paused: {
+        badgeCls:
+          "flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20",
+        iconCls: "text-amber-500",
+        iconName: "circle-pause",
+        textCls:
+          "text-[10px] font-medium text-amber-500 tracking-wide uppercase",
+        label: "Paused",
+      },
+    };
+
+    const cfg = configs[state] || configs.idle;
+    badge.className = cfg.badgeCls;
+    if (icon) {
+      icon.className = cfg.iconCls;
+      icon.innerHTML = `<i data-lucide="${cfg.iconName}" class="w-3 h-3"></i>`;
+      lucide.createIcons({ nodes: icon.querySelectorAll("[data-lucide]") });
+    }
+    text.className = cfg.textCls;
+    text.textContent = cfg.label;
   }
 
   // ═══════════════════════════════════════════════════════

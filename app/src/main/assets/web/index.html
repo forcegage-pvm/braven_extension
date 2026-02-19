@@ -44,6 +44,168 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
+
+      /* ═══ Responsive Grid Layout ═══ */
+      .dashboard-grid {
+        grid-template-columns: 3fr 3fr 2fr 2fr;
+        grid-template-rows: 3fr 3fr 2fr 1.5fr;
+      }
+
+      /* Tablet landscape (≤1199px) — fits iPad Mini through iPad Pro 11" */
+      @media (max-width: 1199px) {
+        .dashboard-grid {
+          grid-template-columns: 1fr 1fr 1fr 1fr;
+          grid-template-rows: 2fr 2fr 1fr 0.8fr;
+          gap: 0.2rem;
+          padding: 0.2rem;
+        }
+        .dashboard-grid > * {
+          min-height: 0;
+          min-width: 0;
+          overflow: hidden;
+        }
+        .dashboard-grid [class*="min-h-"] {
+          min-height: 0 !important;
+        }
+        .time-strip {
+          padding: 0.15rem 0.5rem;
+        }
+        .time-strip .timer-value {
+          font-size: 1rem;
+        }
+        .time-strip .timer-label {
+          font-size: 0.55rem;
+        }
+      }
+
+      /* Tablet portrait (~600–767px) — 2-column grid, cards reflow */
+      @media (max-width: 767px) {
+        .dashboard-grid {
+          grid-template-columns: 1fr 1fr;
+          grid-template-rows: auto;
+          overflow-y: auto;
+        }
+        /* Reset explicit grid positions for 2-col reflow */
+        .dashboard-grid > * {
+          grid-column: auto !important;
+          grid-row: auto !important;
+        }
+        .dashboard-grid .power-card {
+          grid-column: 1 / -1 !important;
+        }
+        .dashboard-grid .lap-card {
+          grid-column: 1 / -1 !important;
+        }
+        .dashboard-grid .trainer-card {
+          grid-column: 1 / -1 !important;
+        }
+        .dashboard-grid .lactate-card {
+          grid-column: 1 / -1 !important;
+        }
+        .dashboard-grid .ride-info-card {
+          display: none;
+        }
+        .time-strip {
+          flex-direction: column;
+          gap: 0.25rem;
+          padding: 0.5rem;
+        }
+        .time-strip .timer-group {
+          gap: 0.5rem;
+        }
+        .time-strip .timer-value {
+          font-size: 1.25rem;
+        }
+        .time-strip .divider {
+          display: none;
+        }
+      }
+
+      /* Small phone (<600px) — single column */
+      @media (max-width: 599px) {
+        .dashboard-grid {
+          grid-template-columns: 1fr;
+        }
+        .dashboard-grid > * {
+          grid-column: auto !important;
+          grid-row: auto !important;
+        }
+      }
+
+      /* Desktop (1200px+) — restore comfortable spacing */
+      @media (min-width: 1200px) {
+        .dashboard-grid {
+          gap: 0.75rem;
+          padding: 0.75rem;
+        }
+        .dashboard-grid .power-card {
+          padding: 1rem 1.25rem;
+        }
+        .dashboard-grid .lap-card {
+          padding: 0.75rem 1rem;
+        }
+        .dashboard-grid .row-start-3 {
+          padding: 0.75rem;
+        }
+        .dashboard-grid .row-start-4 {
+          padding: 0.5rem 0.75rem;
+        }
+        .dashboard-grid .trainer-card {
+          padding: 0.5rem 0.75rem;
+        }
+        .dashboard-grid .lactate-card {
+          padding: 0.5rem 0.75rem;
+        }
+        .dashboard-grid .ride-info-card {
+          padding: 0.5rem 0.75rem;
+        }
+        .time-strip {
+          padding: 0.5rem 1.5rem;
+        }
+        .metric-value-xl {
+          font-size: clamp(3rem, 5vw, 6rem);
+        }
+        .metric-value-lg {
+          font-size: clamp(2.5rem, 4vw, 4.5rem);
+        }
+      }
+      /* Font scaling — Tablet (768–1199px): much smaller */
+      @media (max-width: 1199px) and (min-width: 768px) {
+        .metric-value-xl {
+          font-size: clamp(1.5rem, 3vw, 2.5rem);
+        }
+        .metric-value-lg {
+          font-size: clamp(1.125rem, 2.5vw, 1.75rem);
+        }
+        /* Scale down inline metric text too */
+        .dashboard-grid .text-3xl {
+          font-size: 1.25rem;
+        }
+        .dashboard-grid .text-4xl {
+          font-size: 1.5rem;
+        }
+        .dashboard-grid .text-5xl {
+          font-size: 1.75rem;
+        }
+        .dashboard-grid .text-6xl {
+          font-size: 2rem;
+        }
+        .dashboard-grid .text-7xl {
+          font-size: 2.25rem;
+        }
+        .dashboard-grid .text-8xl {
+          font-size: 2.5rem;
+        }
+        .dashboard-grid .text-2xl {
+          font-size: 1.125rem;
+        }
+        .dashboard-grid .text-xl {
+          font-size: 1rem;
+        }
+        .dashboard-grid .text-lg {
+          font-size: 0.875rem;
+        }
+      }
     </style>
     <script>
       tailwind.config = {
@@ -85,16 +247,15 @@
       <span id="elapsedTime">00:00:00</span>
       <span id="lapNumber">1</span>
       <span id="lapTime">00:00</span>
-      <span id="distance">0.00 km</span>
       <i id="batteryIcon" data-lucide="battery"></i>
       <span id="batteryPercent">--%</span>
     </div>
 
     <!-- ═══════════════ TIME STRIP - Session & Lap Timers ═══════════════ -->
     <div
-      class="flex-none flex items-center justify-between px-6 py-3 bg-neutral-900/50 border-b border-white/5"
+      class="time-strip flex-none flex items-center justify-between px-4 py-1 bg-neutral-900/50 border-b border-white/5"
     >
-      <!-- Connection Badge + Title -->
+      <!-- Left: Connection Badge + Title + Update time -->
       <div class="flex items-center gap-4">
         <div
           id="connectionBadge"
@@ -116,41 +277,65 @@
             >Disconnected</span
           >
         </div>
-        <h1 class="text-base font-medium text-neutral-500 tracking-tight">
+        <!-- Ride State Badge -->
+        <div
+          id="rideStateBadge"
+          class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-neutral-500/10 border border-neutral-500/20"
+        >
+          <span id="rideStateIcon" class="text-neutral-500">
+            <i data-lucide="circle-pause" class="w-3 h-3"></i>
+          </span>
+          <span
+            id="rideStateText"
+            class="text-[10px] font-medium text-neutral-500 tracking-wide uppercase"
+            >Idle</span
+          >
+        </div>
+        <h1
+          class="text-base font-medium text-neutral-500 tracking-tight hidden sm:block"
+        >
           Braven Performance Lab
         </h1>
+        <span class="hidden sm:inline-block h-4 w-px bg-white/10"></span>
+        <span
+          id="lastUpdate"
+          class="hidden sm:block text-[10px] text-neutral-600 uppercase tracking-widest font-medium"
+          >--</span
+        >
       </div>
 
-      <!-- Timers (centered) -->
-      <div class="flex items-center gap-12">
-        <div class="flex items-center gap-3">
-          <div class="flex items-center gap-2 text-neutral-500">
-            <i data-lucide="timer" class="w-5 h-5"></i>
-            <span class="text-sm font-medium uppercase tracking-wide"
+      <!-- Timers -->
+      <div class="timer-group flex items-center gap-6 md:gap-12">
+        <div class="flex items-center gap-2 md:gap-3">
+          <div class="flex items-center gap-1 md:gap-2 text-neutral-500">
+            <i data-lucide="timer" class="w-4 h-4 md:w-5 md:h-5"></i>
+            <span
+              class="timer-label text-xs md:text-sm font-medium uppercase tracking-wide"
               >Session</span
             >
           </div>
           <span
             id="sessionTime"
-            class="text-3xl font-bold tabular-nums text-white tracking-tight"
+            class="timer-value text-xl md:text-3xl font-bold tabular-nums text-white tracking-tight"
             >00:00:00</span
           >
         </div>
 
         <!-- Divider -->
-        <div class="h-8 w-px bg-white/10"></div>
+        <div class="divider h-8 w-px bg-white/10"></div>
 
         <!-- Lap Time -->
-        <div class="flex items-center gap-3">
-          <div class="flex items-center gap-2 text-neutral-500">
-            <i data-lucide="flag" class="w-5 h-5"></i>
-            <span class="text-sm font-medium uppercase tracking-wide"
+        <div class="flex items-center gap-2 md:gap-3">
+          <div class="flex items-center gap-1 md:gap-2 text-neutral-500">
+            <i data-lucide="flag" class="w-4 h-4 md:w-5 md:h-5"></i>
+            <span
+              class="timer-label text-xs md:text-sm font-medium uppercase tracking-wide"
               >Lap <span id="lapNumberBig" class="text-amber-400">1</span></span
             >
           </div>
           <span
             id="lapTimeBig"
-            class="text-3xl font-bold tabular-nums text-amber-400 tracking-tight"
+            class="timer-value text-xl md:text-3xl font-bold tabular-nums text-amber-400 tracking-tight"
             >00:00</span
           >
         </div>
@@ -159,11 +344,7 @@
 
     <!-- Main Dashboard - Primary Metrics Focus -->
     <main
-      class="flex-grow p-4 grid gap-4 relative overflow-hidden"
-      style="
-        grid-template-columns: 3fr 3fr 2fr 2fr;
-        grid-template-rows: 1fr 1fr 1fr 1fr;
-      "
+      class="dashboard-grid flex-grow p-2 grid gap-2 relative overflow-hidden"
     >
       <!-- Background glow -->
       <div
@@ -175,186 +356,136 @@
 
       <!-- ═══════════════ POWER - Primary Metric (2 columns) ═══════════════ -->
       <div
-        class="col-span-2 row-span-2 relative flex flex-col rounded-3xl bg-gradient-to-br from-purple-950/40 to-neutral-900/60 border border-purple-500/20 p-6 backdrop-blur-sm overflow-hidden"
+        class="power-card col-span-2 row-span-2 relative flex flex-col rounded-xl bg-gradient-to-br from-purple-950/40 to-neutral-900/60 border border-purple-500/20 border-l-2 border-l-purple-500 p-2 backdrop-blur-sm overflow-hidden"
       >
-        <div
-          class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500"
-        ></div>
-
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-3">
-            <div class="p-2.5 rounded-xl bg-purple-500/20 text-purple-400">
-              <i data-lucide="zap" class="w-6 h-6"></i>
-            </div>
-            <div>
-              <span
-                class="text-sm font-semibold tracking-widest text-purple-400 uppercase"
-                >Power Output</span
-              >
-              <div class="text-xs text-neutral-500">Primary Metric</div>
-            </div>
-          </div>
+        <div class="flex items-center justify-between">
+          <span
+            class="text-[10px] font-semibold tracking-widest text-purple-400 uppercase"
+            >Power</span
+          >
           <span
             id="powerZoneBadge"
-            class="text-sm font-bold text-purple-300 bg-purple-500/20 px-3 py-1 rounded-lg"
+            class="text-[10px] font-bold text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded"
             >--</span
           >
         </div>
-
-        <!-- Main Values -->
-        <div class="flex items-end gap-8 my-4">
+        <div class="flex items-end gap-4 my-1">
           <div class="flex-1">
-            <div class="text-xs text-neutral-500 uppercase tracking-wider mb-1">
+            <div class="text-[10px] text-neutral-500 uppercase tracking-wider">
               Instant
             </div>
-            <div class="flex items-baseline gap-2">
+            <div class="flex items-baseline gap-1">
               <span
                 id="power"
-                class="text-8xl font-bold tracking-tighter text-white tabular-nums leading-none"
+                class="metric-value-xl text-7xl md:text-8xl font-bold tracking-tighter text-white tabular-nums leading-none"
                 >--</span
               >
-              <span class="text-2xl text-neutral-500 font-medium">W</span>
+              <span class="text-lg text-neutral-500 font-medium">W</span>
             </div>
           </div>
           <div class="flex-1">
-            <div class="text-xs text-neutral-500 uppercase tracking-wider mb-1">
-              3s Average
+            <div class="text-[10px] text-neutral-500 uppercase tracking-wider">
+              3s Avg
             </div>
-            <div class="flex items-baseline gap-2">
+            <div class="flex items-baseline gap-1">
               <span
                 id="power3sAvg"
-                class="text-7xl font-bold tracking-tighter text-purple-300 tabular-nums leading-none"
+                class="metric-value-lg text-5xl md:text-7xl font-bold tracking-tighter text-purple-300 tabular-nums leading-none"
                 >--</span
               >
-              <span class="text-xl text-neutral-500 font-medium">W</span>
+              <span class="text-base text-neutral-500 font-medium">W</span>
             </div>
           </div>
         </div>
-
-        <!-- Lap Power Stats -->
-        <div class="flex gap-6 text-sm mb-4 px-1">
+        <div class="flex gap-4 text-xs text-neutral-500 mb-1">
           <div>
-            <span class="text-neutral-500">Lap Avg:</span>
-            <span
-              id="lapPower"
-              class="text-white font-semibold tabular-nums ml-1"
+            Avg:
+            <span id="lapPower" class="text-white font-semibold tabular-nums"
               >-- W</span
             >
           </div>
           <div>
-            <span class="text-neutral-500">Lap NP:</span>
+            NP:
             <span
               id="lapNormalizedPower"
-              class="text-white font-semibold tabular-nums ml-1"
+              class="text-white font-semibold tabular-nums"
               >-- W</span
             >
           </div>
           <div>
-            <span class="text-neutral-500">Lap Max:</span>
-            <span
-              id="lapMaxPower"
-              class="text-white font-semibold tabular-nums ml-1"
+            Max:
+            <span id="lapMaxPower" class="text-white font-semibold tabular-nums"
               >-- W</span
             >
           </div>
         </div>
-
-        <!-- Power Graph -->
-        <div class="flex-grow relative mt-2 min-h-[120px]">
+        <div class="flex-grow relative min-h-[80px]">
           <canvas id="powerGraph" class="w-full h-full"></canvas>
           <div
-            class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-purple-950/60 to-transparent pointer-events-none"
+            class="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-purple-950/60 to-transparent pointer-events-none"
           ></div>
         </div>
       </div>
 
-      <!-- ═══════════════ VO2 - Placeholder (1 column) ═══════════════ -->
+      <!-- ═══════════════ VO2 (1 column) ═══════════════ -->
       <div
-        class="row-start-3 relative flex flex-col rounded-3xl bg-gradient-to-br from-cyan-950/40 to-neutral-900/60 border border-cyan-500/20 p-5 backdrop-blur-sm overflow-hidden"
+        class="row-start-3 relative flex flex-col rounded-xl bg-gradient-to-br from-cyan-950/40 to-neutral-900/60 border border-cyan-500/20 border-l-2 border-l-cyan-500 p-2 backdrop-blur-sm overflow-hidden"
       >
-        <div
-          class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-cyan-500 to-teal-500"
-        ></div>
-
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <div class="p-2 rounded-xl bg-cyan-500/20 text-cyan-400">
-              <i data-lucide="wind" class="w-5 h-5"></i>
-            </div>
-            <span
-              class="text-xs font-semibold tracking-widest text-cyan-400 uppercase"
-              >VO2</span
-            >
-          </div>
-          <span id="vo2LiveBadge" class="text-xs font-medium text-neutral-500"
+        <div class="flex items-center justify-between">
+          <span
+            class="text-[10px] font-semibold tracking-widest text-cyan-400 uppercase"
+            >VO2</span
+          >
+          <span
+            id="vo2LiveBadge"
+            class="text-[10px] font-medium text-neutral-500"
             >Pending</span
           >
         </div>
-
-        <!-- Main Value -->
-        <div class="flex items-baseline gap-1 my-2">
+        <div class="flex items-baseline gap-1">
           <span
             id="vo2"
-            class="text-6xl font-bold tracking-tighter text-white tabular-nums"
+            class="metric-value-lg text-4xl md:text-5xl font-bold tracking-tighter text-white tabular-nums"
             >--</span
           >
-          <span class="text-lg text-neutral-500 font-medium">ml/kg/min</span>
+          <span class="text-sm text-neutral-500">ml/kg/min</span>
         </div>
-
-        <!-- VO2 Max Reference -->
-        <div class="text-sm text-neutral-500 mb-3">
-          <span>% of Max:</span>
-          <span id="vo2Percent" class="text-cyan-400 font-semibold ml-1"
-            >--%</span
-          >
-        </div>
-
-        <!-- VO2 Graph -->
-        <div class="flex-grow relative min-h-[80px]">
+        <div class="flex-grow relative min-h-[60px] mt-0.5">
           <canvas id="vo2Graph" class="w-full h-full"></canvas>
+        </div>
+        <div class="text-[10px] text-neutral-500 mt-auto pt-1">
+          % Max:
+          <span id="vo2Percent" class="text-cyan-400 font-semibold">--%</span>
         </div>
       </div>
 
       <!-- ═══════════════ HEART RATE (1 column) ═══════════════ -->
       <div
-        class="row-start-3 relative flex flex-col rounded-3xl bg-gradient-to-br from-rose-950/40 to-neutral-900/60 border border-rose-500/20 p-5 backdrop-blur-sm overflow-hidden"
+        class="row-start-3 relative flex flex-col rounded-xl bg-gradient-to-br from-rose-950/40 to-neutral-900/60 border border-rose-500/20 border-l-2 border-l-rose-500 p-2 backdrop-blur-sm overflow-hidden"
       >
-        <div
-          class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-rose-500 to-red-600"
-        ></div>
-
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <div class="p-2 rounded-xl bg-rose-500/20 text-rose-400">
-              <i data-lucide="heart" class="w-5 h-5"></i>
-            </div>
-            <span
-              class="text-xs font-semibold tracking-widest text-rose-400 uppercase"
-              >Heart Rate</span
-            >
-          </div>
+        <div class="flex items-center justify-between">
+          <span
+            class="text-[10px] font-semibold tracking-widest text-rose-400 uppercase"
+            >Heart Rate</span
+          >
           <span
             id="hrLiveBadge"
-            class="text-xs font-medium text-rose-400 animate-pulsefast"
+            class="text-[10px] font-medium text-rose-400 animate-pulsefast"
             >Live</span
           >
         </div>
-
-        <!-- Main Value -->
-        <div class="flex items-baseline gap-1 my-2">
+        <div class="flex items-baseline gap-1">
           <span
             id="heartRate"
-            class="text-6xl font-bold tracking-tighter text-white tabular-nums"
+            class="metric-value-lg text-4xl md:text-5xl font-bold tracking-tighter text-white tabular-nums"
             >--</span
           >
-          <span class="text-lg text-neutral-500 font-medium">BPM</span>
+          <span class="text-sm text-neutral-500">BPM</span>
         </div>
-
-        <!-- HR Stats -->
-        <div class="flex gap-4 text-sm text-neutral-500 mb-3">
+        <div class="flex-grow relative min-h-[60px] mt-0.5">
+          <canvas id="hrGraph" class="w-full h-full"></canvas>
+        </div>
+        <div class="flex gap-3 text-[10px] text-neutral-500 mt-auto pt-1">
           <div>
             Max:
             <span id="maxHeartRate" class="text-white font-semibold">--</span>
@@ -364,44 +495,25 @@
             <span id="lapHeartRate" class="text-white font-semibold">--</span>
           </div>
         </div>
-
-        <!-- HR Graph -->
-        <div class="flex-grow relative min-h-[80px]">
-          <canvas id="hrGraph" class="w-full h-full"></canvas>
-        </div>
       </div>
 
       <!-- ═══════════════ CADENCE (1 column) ═══════════════ -->
       <div
-        class="row-start-4 relative flex flex-col rounded-3xl bg-gradient-to-br from-blue-950/40 to-neutral-900/60 border border-blue-500/20 p-5 backdrop-blur-sm overflow-hidden"
+        class="row-start-4 relative flex flex-col rounded-xl bg-gradient-to-br from-blue-950/40 to-neutral-900/60 border border-blue-500/20 border-l-2 border-l-blue-400 p-1.5 backdrop-blur-sm overflow-hidden"
       >
-        <div
-          class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-400 to-cyan-400"
-        ></div>
-
-        <!-- Header -->
-        <div class="flex items-center gap-2 mb-2">
-          <div class="p-2 rounded-xl bg-blue-500/20 text-blue-400">
-            <i data-lucide="rotate-cw" class="w-5 h-5"></i>
-          </div>
-          <span
-            class="text-xs font-semibold tracking-widest text-blue-400 uppercase"
-            >Cadence</span
-          >
-        </div>
-
-        <!-- Main Value -->
-        <div class="flex items-baseline gap-1 my-2">
+        <span
+          class="text-[10px] font-semibold tracking-widest text-blue-400 uppercase"
+          >Cadence</span
+        >
+        <div class="flex items-baseline gap-1">
           <span
             id="cadence"
-            class="text-6xl font-bold tracking-tighter text-white tabular-nums"
+            class="text-2xl md:text-3xl font-bold tracking-tighter text-white tabular-nums"
             >--</span
           >
-          <span class="text-lg text-neutral-500 font-medium">RPM</span>
+          <span class="text-sm text-neutral-500">RPM</span>
         </div>
-
-        <!-- Cadence Stats -->
-        <div class="flex gap-4 text-sm text-neutral-500 mb-3">
+        <div class="flex gap-3 text-[10px] text-neutral-500 mt-auto">
           <div>
             Avg:
             <span id="avgCadence" class="text-white font-semibold">--</span>
@@ -411,44 +523,28 @@
             <span id="lapCadence" class="text-white font-semibold">--</span>
           </div>
         </div>
-
-        <!-- Cadence Graph -->
-        <div class="flex-grow relative min-h-[80px]">
+        <div class="hidden">
           <canvas id="cadenceGraph" class="w-full h-full"></canvas>
         </div>
       </div>
 
       <!-- ═══════════════ SPEED (1 column) ═══════════════ -->
       <div
-        class="row-start-4 relative flex flex-col rounded-3xl bg-gradient-to-br from-emerald-950/30 to-neutral-900/60 border border-emerald-500/10 p-5 backdrop-blur-sm overflow-hidden"
+        class="row-start-4 relative flex flex-col rounded-xl bg-gradient-to-br from-emerald-950/30 to-neutral-900/60 border border-emerald-500/10 border-l-2 border-l-emerald-500 p-1.5 backdrop-blur-sm overflow-hidden"
       >
-        <div
-          class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-green-500 opacity-60"
-        ></div>
-
-        <!-- Header -->
-        <div class="flex items-center gap-2 mb-2">
-          <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
-            <i data-lucide="gauge" class="w-5 h-5"></i>
-          </div>
-          <span
-            class="text-xs font-medium tracking-widest text-emerald-400/70 uppercase"
-            >Speed</span
-          >
-        </div>
-
-        <!-- Main Value -->
-        <div class="flex items-baseline gap-1 my-1">
+        <span
+          class="text-[10px] font-medium tracking-widest text-emerald-400/70 uppercase"
+          >Speed</span
+        >
+        <div class="flex items-baseline gap-1">
           <span
             id="speed"
-            class="text-5xl font-bold tracking-tighter text-white tabular-nums"
+            class="text-2xl md:text-3xl font-bold tracking-tighter text-white tabular-nums"
             >--</span
           >
-          <span class="text-base text-neutral-500 font-medium">KPH</span>
+          <span class="text-sm text-neutral-500">KPH</span>
         </div>
-
-        <!-- Speed Stats -->
-        <div class="flex gap-4 text-xs text-neutral-500 mt-auto">
+        <div class="flex gap-3 text-[10px] text-neutral-500 mt-auto">
           <div>Avg: <span id="averageSpeed" class="text-white">--</span></div>
           <div>Lap: <span id="lapSpeed" class="text-white">--</span></div>
         </div>
@@ -458,55 +554,48 @@
 
       <!-- Lap History Table (full width) -->
       <div
-        class="col-span-2 row-span-2 col-start-3 row-start-1 relative flex flex-col rounded-2xl bg-neutral-900/30 border border-white/5 p-4 backdrop-blur-sm"
+        class="lap-card col-span-2 row-span-2 col-start-3 row-start-1 relative flex flex-col rounded-xl bg-neutral-900/30 border border-white/5 p-2 backdrop-blur-sm"
       >
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-2">
-            <div class="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
-              <i data-lucide="list" class="w-4 h-4"></i>
-            </div>
-            <span
-              class="text-xs font-medium tracking-wider text-neutral-500 uppercase"
-              >Lap History</span
-            >
-          </div>
+        <div class="flex items-center justify-between mb-1">
+          <span
+            class="text-[10px] font-medium tracking-wider text-neutral-500 uppercase"
+            >Lap History</span
+          >
           <button
             id="newLapBtn"
             onclick="markNewLap()"
-            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 hover:border-amber-500/50 transition-colors"
+            class="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 hover:border-amber-500/50 transition-colors"
           >
-            <i data-lucide="flag" class="w-3.5 h-3.5"></i>
-            New Lap
+            <i data-lucide="flag" class="w-3 h-3"></i> New Lap
           </button>
         </div>
         <div
-          class="overflow-auto max-h-48 scrollbar-thin scrollbar-thumb-neutral-700"
+          class="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-neutral-700"
         >
-          <table class="w-full text-sm">
+          <table class="w-full text-xs">
             <thead
-              class="sticky top-0 bg-neutral-900/90 text-neutral-400 text-xs uppercase"
+              class="sticky top-0 bg-neutral-900/90 text-neutral-400 text-[10px] uppercase"
             >
               <tr class="border-b border-neutral-700">
-                <th class="px-3 py-2 text-left">Lap</th>
-                <th class="px-3 py-2 text-left">Time</th>
-                <th class="px-3 py-2 text-left">Power</th>
-                <th class="px-3 py-2 text-left">HR</th>
-                <th class="px-3 py-2 text-left">Cad</th>
-                <th class="px-3 py-2 text-left">La</th>
+                <th class="px-2 py-1 text-left">Lap</th>
+                <th class="px-2 py-1 text-left">Time</th>
+                <th class="px-2 py-1 text-left">Power</th>
+                <th class="px-2 py-1 text-left">HR</th>
+                <th class="px-2 py-1 text-left">Cad</th>
+                <th class="px-2 py-1 text-left">La</th>
               </tr>
             </thead>
             <tbody>
-              <!-- Current lap (highlighted) -->
               <tr
                 id="currentLapRow"
                 class="border-b border-cyan-900/50 bg-cyan-950/30"
               >
-                <td class="px-3 py-2 text-cyan-400 font-semibold">1</td>
-                <td class="px-3 py-2 font-mono text-cyan-300">00:00</td>
-                <td class="px-3 py-2 font-semibold text-cyan-400">--</td>
-                <td class="px-3 py-2 text-cyan-300">--</td>
-                <td class="px-3 py-2 text-cyan-300">--</td>
-                <td class="px-3 py-2 text-cyan-300">--</td>
+                <td class="px-2 py-1 text-cyan-400 font-semibold">1</td>
+                <td class="px-2 py-1 font-mono text-cyan-300">00:00</td>
+                <td class="px-2 py-1 font-semibold text-cyan-400">--</td>
+                <td class="px-2 py-1 text-cyan-300">--</td>
+                <td class="px-2 py-1 text-cyan-300">--</td>
+                <td class="px-2 py-1 text-cyan-300">--</td>
               </tr>
             </tbody>
             <!-- Completed laps (populated dynamically) -->
@@ -517,19 +606,16 @@
 
       <!-- Trainer Control (KICKR via BLE FTMS) -->
       <div
-        class="col-span-2 col-start-3 row-start-4 relative flex flex-col rounded-2xl bg-neutral-900/30 border border-white/5 p-4 backdrop-blur-sm"
+        class="trainer-card col-span-2 col-start-3 row-start-4 relative flex flex-col rounded-xl bg-neutral-900/30 border border-white/5 p-1.5 backdrop-blur-sm"
       >
-        <div class="flex items-center gap-2 mb-2">
-          <div class="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
-            <i data-lucide="zap" class="w-4 h-4"></i>
-          </div>
+        <div class="flex items-center justify-between mb-1">
           <span
-            class="text-xs font-medium tracking-wider text-neutral-500 uppercase"
+            class="text-[10px] font-medium tracking-wider text-neutral-500 uppercase"
             >Trainer Control</span
           >
           <span
             id="trainerStateBadge"
-            class="ml-auto px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest rounded-full bg-neutral-700/50 text-neutral-500"
+            class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest rounded-full bg-neutral-700/50 text-neutral-500"
             >Disconnected</span
           >
         </div>
@@ -658,118 +744,147 @@
 
       <!-- Lactate Entry -->
       <div
-        class="row-start-3 col-start-3 col-span-2 relative flex rounded-2xl bg-neutral-900/30 border border-white/5 p-4 backdrop-blur-sm gap-4"
+        class="lactate-card row-start-3 col-start-3 relative flex rounded-xl bg-neutral-900/30 border border-white/5 border-l-2 border-l-rose-500 p-1.5 backdrop-blur-sm gap-1.5"
       >
-        <!-- Left column: header + big value -->
         <div class="flex flex-col justify-between flex-1 min-w-0">
-          <div class="flex items-center gap-2 mb-1">
-            <div class="p-1.5 rounded-lg bg-rose-500/10 text-rose-400">
-              <i data-lucide="droplet" class="w-4 h-4"></i>
-            </div>
-            <span
-              class="text-xs font-medium tracking-wider text-rose-400 uppercase"
-              >LACTATE</span
-            >
-          </div>
+          <span
+            class="text-[10px] font-medium tracking-wider text-rose-400 uppercase"
+            >Lactate</span
+          >
           <div class="flex items-baseline gap-1">
             <span
               id="lactateValue"
-              class="text-6xl font-bold tracking-tighter text-white tabular-nums"
+              class="text-2xl md:text-3xl font-bold tracking-tighter text-white tabular-nums"
               >--</span
             >
-            <span class="text-sm text-neutral-500">mmol/L</span>
+            <span class="text-[10px] text-neutral-500">mmol/L</span>
           </div>
-          <div
-            id="lactateTimestamp"
-            class="text-xs text-neutral-500 mt-1"
-          ></div>
+          <div id="lactateTimestamp" class="text-[10px] text-neutral-500"></div>
+          <div class="flex items-center gap-1 mt-0.5">
+            <span class="text-[10px] text-neutral-600">Delay:</span>
+            <select
+              id="lactateDelay"
+              class="text-[10px] bg-neutral-800/80 border border-neutral-700 text-neutral-300 rounded px-1 py-0.5 focus:outline-none focus:border-rose-500/50"
+            >
+              <option value="0">0s</option>
+              <option value="15">15s</option>
+              <option value="30" selected>30s</option>
+              <option value="45">45s</option>
+              <option value="60">60s</option>
+              <option value="90">90s</option>
+            </select>
+          </div>
         </div>
         <!-- Right column: stepper controls -->
-        <div class="flex items-center justify-center gap-2 shrink-0">
+        <div class="flex items-center justify-center gap-1 shrink-0">
           <!-- Whole digit -->
-          <div class="flex flex-col items-center gap-1.5">
+          <div class="flex flex-col items-center gap-0.5">
             <button
               onclick="lactateStep('whole', 1)"
-              class="w-14 h-10 flex items-center justify-center rounded-lg bg-neutral-800/80 border border-neutral-700 text-neutral-400 hover:bg-neutral-700/80 hover:text-white transition-colors"
+              class="w-9 h-6 flex items-center justify-center rounded-md bg-neutral-800/80 border border-neutral-700 text-neutral-400 hover:bg-neutral-700/80 hover:text-white transition-colors"
             >
-              <i data-lucide="chevron-up" class="w-5 h-5"></i>
+              <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>
             </button>
             <div
               id="lactateWhole"
-              class="w-14 h-14 flex items-center justify-center rounded-lg bg-neutral-800/80 border border-neutral-700 text-white text-2xl font-bold font-mono"
+              class="w-9 h-9 flex items-center justify-center rounded-md bg-neutral-800/80 border border-neutral-700 text-white text-base font-bold font-mono"
             >
               0
             </div>
             <button
               onclick="lactateStep('whole', -1)"
-              class="w-14 h-10 flex items-center justify-center rounded-lg bg-neutral-800/80 border border-neutral-700 text-neutral-400 hover:bg-neutral-700/80 hover:text-white transition-colors"
+              class="w-9 h-6 flex items-center justify-center rounded-md bg-neutral-800/80 border border-neutral-700 text-neutral-400 hover:bg-neutral-700/80 hover:text-white transition-colors"
             >
-              <i data-lucide="chevron-down" class="w-5 h-5"></i>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
             </button>
-            <span
-              class="text-[10px] font-medium tracking-wider text-neutral-500 uppercase"
-              >WHOLE</span
-            >
           </div>
           <!-- Dot -->
-          <span class="text-2xl font-bold text-neutral-500 self-center -mt-6"
+          <span class="text-base font-bold text-neutral-500 self-center"
             >.</span
           >
           <!-- Decimal digit -->
-          <div class="flex flex-col items-center gap-1.5">
+          <div class="flex flex-col items-center gap-0.5">
             <button
               onclick="lactateStep('dec', 1)"
-              class="w-14 h-10 flex items-center justify-center rounded-lg bg-neutral-800/80 border border-neutral-700 text-neutral-400 hover:bg-neutral-700/80 hover:text-white transition-colors"
+              class="w-9 h-6 flex items-center justify-center rounded-md bg-neutral-800/80 border border-neutral-700 text-neutral-400 hover:bg-neutral-700/80 hover:text-white transition-colors"
             >
-              <i data-lucide="chevron-up" class="w-5 h-5"></i>
+              <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>
             </button>
             <div
               id="lactateDec"
-              class="w-14 h-14 flex items-center justify-center rounded-lg bg-neutral-800/80 border border-neutral-700 text-white text-2xl font-bold font-mono"
+              class="w-9 h-9 flex items-center justify-center rounded-md bg-neutral-800/80 border border-neutral-700 text-white text-base font-bold font-mono"
             >
               0
             </div>
             <button
               onclick="lactateStep('dec', -1)"
-              class="w-14 h-10 flex items-center justify-center rounded-lg bg-neutral-800/80 border border-neutral-700 text-neutral-400 hover:bg-neutral-700/80 hover:text-white transition-colors"
+              class="w-9 h-6 flex items-center justify-center rounded-md bg-neutral-800/80 border border-neutral-700 text-neutral-400 hover:bg-neutral-700/80 hover:text-white transition-colors"
             >
-              <i data-lucide="chevron-down" class="w-5 h-5"></i>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
             </button>
-            <span
-              class="text-[10px] font-medium tracking-wider text-neutral-500 uppercase"
-              >DEC</span
-            >
           </div>
           <!-- Submit -->
           <button
             id="lactateSubmitBtn"
             onclick="submitLactate()"
-            class="w-16 h-14 flex items-center justify-center rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30 hover:border-rose-500/50 transition-colors self-center -mt-6 ml-1"
+            class="w-9 h-9 flex items-center justify-center rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30 hover:border-rose-500/50 transition-colors self-center ml-0.5"
           >
-            <i data-lucide="check" class="w-7 h-7"></i>
+            <i data-lucide="check" class="w-4 h-4"></i>
           </button>
+        </div>
+      </div>
+
+      <!-- Ride Info (compact) — uses freed col4 from lactate -->
+      <div
+        class="ride-info-card col-start-4 row-start-3 relative flex flex-col rounded-xl bg-neutral-900/30 border border-white/5 p-1.5 backdrop-blur-sm overflow-hidden"
+      >
+        <span
+          class="text-[10px] font-medium tracking-wider text-neutral-500 uppercase mb-0.5"
+          >Ride Info</span
+        >
+        <div class="flex flex-col gap-1 mt-auto">
+          <div>
+            <div class="text-[10px] text-neutral-600 uppercase tracking-wide">
+              Distance
+            </div>
+            <span
+              id="distance"
+              class="text-lg font-bold text-white tabular-nums"
+              >0.00 km</span
+            >
+          </div>
+          <div>
+            <div class="text-[10px] text-neutral-600 uppercase tracking-wide">
+              Elevation
+            </div>
+            <span
+              id="elevation"
+              class="text-sm font-semibold text-neutral-400 tabular-nums"
+              >--</span
+            >
+            <span class="text-[10px] text-neutral-600">m</span>
+          </div>
+          <div>
+            <div class="text-[10px] text-neutral-600 uppercase tracking-wide">
+              Grade
+            </div>
+            <span
+              id="grade"
+              class="text-sm font-semibold text-neutral-400 tabular-nums"
+              >0.0</span
+            >
+            <span class="text-[10px] text-neutral-600">%</span>
+          </div>
         </div>
       </div>
 
       <!-- Hidden elements to keep JS refs intact -->
       <span id="temperature" class="hidden"></span>
-      <span id="elevation" class="hidden"></span>
-      <span id="grade" class="hidden"></span>
       <span id="coreTemp" class="hidden"></span>
       <span id="coreTempTrend" class="hidden"></span>
       <span id="latitude" class="hidden"></span>
       <span id="longitude" class="hidden"></span>
     </main>
-
-    <!-- Minimal Footer -->
-    <footer
-      class="flex-none px-6 py-2 border-t border-white/5 bg-neutral-950 flex justify-between items-center text-neutral-600 text-xs"
-    >
-      <span id="lastUpdate" class="uppercase tracking-widest font-medium"
-        >--</span
-      >
-      <span>Braven Performance Lab v1.0</span>
-    </footer>
 
     <script src="/js/websocket-client.js"></script>
     <script src="/js/dashboard-renderer.js"></script>
@@ -790,6 +905,18 @@
       });
 
       client.connect();
+
+      // Force reconnect when WiFi comes back or tab regains focus
+      window.addEventListener("online", () => {
+        console.log("[Dashboard] Network online — forcing reconnect");
+        client.forceReconnect();
+      });
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) {
+          console.log("[Dashboard] Tab visible — forcing reconnect");
+          client.forceReconnect();
+        }
+      });
 
       /**
        * Mark a new lap on the Karoo via the API
@@ -897,7 +1024,11 @@
           const response = await fetch("/api/lactate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ value: value }),
+            body: JSON.stringify({
+              value: value,
+              offsetSeconds:
+                parseInt(document.getElementById("lactateDelay").value) || 0,
+            }),
           });
           const result = await response.json();
 
